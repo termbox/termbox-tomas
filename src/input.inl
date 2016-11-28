@@ -131,6 +131,9 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
 		if ((n1&32) != 0)
 			event->mod |= TB_MOD_MOTION;
 
+    // if (event->key != TB_KEY_MOUSE_RELEASE)
+      event->meta = (n1 >> 2) - 7;
+
 		event->x = (uint8_t)n2 - 1;
 		event->y = (uint8_t)n3 - 1;
 
