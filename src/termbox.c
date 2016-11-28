@@ -102,6 +102,14 @@ int tb_init_fd(int inout_)
 	struct termios tios;
 	memcpy(&tios, &orig_tios, sizeof(tios));
 
+  tios.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+  tios.c_oflag &= ~(OPOST);
+  tios.c_cflag |= (CS8);
+  tios.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+  tios.c_cc[VMIN] = 0; /* Return each byte, or zero for timeout. */
+  tios.c_cc[VTIME] = 1; /* 100 ms timeout (unit is tens of second). */
+
+/*
 	tios.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
                            | INLCR | IGNCR | ICRNL | IXON);
 	tios.c_oflag &= ~OPOST;
@@ -110,6 +118,7 @@ int tb_init_fd(int inout_)
 	tios.c_cflag |= CS8;
 	tios.c_cc[VMIN] = 0;
 	tios.c_cc[VTIME] = 0;
+*/
 	tcsetattr(inout, TCSAFLUSH, &tios);
 
 	bytebuffer_init(&input_buffer, 128);
@@ -578,7 +587,9 @@ static void sigwinch_handler(int xxx)
 {
 	(void) xxx;
 	const int zzz = 1;
-	write(winch_fds[1], &zzz, sizeof(int));
+
+  int unused __attribute__((unused));
+	unused = write(winch_fds[1], &zzz, sizeof(int));
 }
 
 static void update_size(void)
@@ -589,6 +600,71 @@ static void update_size(void)
 	cellbuf_clear(&front_buffer);
 	send_clear();
 }
+
+int cutesc = 0;
+
+static int read_and_extract_event(struct tb_event * event, int inputmode) {
+  int fd = STDIN_FILENO;
+  int max = 10;
+
+  int nread, rs;
+  char c, seq[max];
+
+  if (cutesc) {
+    c = 27;
+    cutesc = 0;
+  } else {
+    while ((nread = read(fd, &c, 1)) == 0);
+    if (nread == -1) exit(1);
+  }
+
+  seq[0] = c;
+	tb_clear();
+
+  if (c == 27) {
+    
+    nread = 1;
+    while (nread < max) {
+      rs = read(fd, seq + nread++, 1);
+      if (rs == -1) exit(1);
+      if (rs == 0) break;
+      
+      if (seq[nread-1] == 27) {
+        cutesc = 1;
+        break;
+      }
+    }
+
+    if (nread == max) {
+      printf("reached the end\n");
+    	return false;
+    }
+
+    int i, ch;
+  	// printf("\nseq [%d] --> ", nread); // key);
+    tb_change_cell(2, 1, nread + 48, TB_WHITE, TB_DEFAULT);
+    tb_change_cell(3, 1, ':', TB_WHITE, TB_DEFAULT);
+
+  	for (i = 1; i < max; i++) {
+  	  ch = i > nread ? ' ' : seq[i] > 0 ? seq[i] : '-';
+      tb_change_cell(4+i, 1, ch, TB_WHITE, TB_DEFAULT);
+  	}
+  	
+  	int mouse_parsed = parse_mouse_event(event, seq, nread);
+  	if (mouse_parsed != 0)
+  	  return mouse_parsed;
+
+    event->meta = nread;
+    event->type = TB_EVENT_KEY;
+    event->key  = TB_KEY_ARROW_DOWN;
+    return true;
+  } else {
+    event->type = TB_EVENT_KEY;
+    event->key  = c;
+    return true;
+  }
+}
+
 
 static int read_up_to(int n) {
 	assert(n > 0);
@@ -629,49 +705,9 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
 #define ENOUGH_DATA_FOR_PARSING 64
 	fd_set events;
 	memset(event, 0, sizeof(struct tb_event));
-
-	// try to extract event from input buffer, return on success
-	event->type = TB_EVENT_KEY;
-	if (extract_event(event, &input_buffer, inputmode))
-		return event->type;
-
-	// it looks like input buffer is incomplete, let's try the short path,
-	// but first make sure there is enough space
-	int n = read_up_to(ENOUGH_DATA_FOR_PARSING);
-	if (n < 0)
-		return -1;
-	if (n > 0 && extract_event(event, &input_buffer, inputmode))
-		return event->type;
-
-	// n == 0, or not enough data, let's go to select
-	while (1) {
-		FD_ZERO(&events);
-		FD_SET(inout, &events);
-		FD_SET(winch_fds[0], &events);
-		int maxfd = (winch_fds[0] > inout) ? winch_fds[0] : inout;
-		int result = select(maxfd+1, &events, 0, 0, timeout);
-		if (!result)
-			return 0;
-
-		if (FD_ISSET(inout, &events)) {
-			event->type = TB_EVENT_KEY;
-			n = read_up_to(ENOUGH_DATA_FOR_PARSING);
-			if (n < 0)
-				return -1;
-
-			if (n == 0)
-				continue;
-
-			if (extract_event(event, &input_buffer, inputmode))
-				return event->type;
-		}
-		if (FD_ISSET(winch_fds[0], &events)) {
-			event->type = TB_EVENT_RESIZE;
-			int zzz = 0;
-			read(winch_fds[0], &zzz, sizeof(int));
-			buffer_size_change_request = 1;
-			get_term_size(&event->w, &event->h);
-			return TB_EVENT_RESIZE;
-		}
+	
+	while(1) {
+	if (read_and_extract_event(event, inputmode))
+	  return event->type;
 	}
 }

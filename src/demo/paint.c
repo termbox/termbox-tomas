@@ -97,7 +97,7 @@ void reallocBackBuffer(int w, int h) {
 	backbuf = calloc(sizeof(struct tb_cell), w*h);
 }
 
-int main(int argv, char **argc) {
+int main(void) {
 	int code = tb_init();
 	if (code < 0) {
 		fprintf(stderr, "termbox init failed, code: %d\n", code);

@@ -16,6 +16,7 @@ enum {
 	T_FUNCS_NUM,
 };
 
+
 #define ENTER_MOUSE_SEQ "\x1b[?1000h\x1b[?1002h\x1b[?1015h\x1b[?1006h"
 #define EXIT_MOUSE_SEQ "\x1b[?1006l\x1b[?1015l\x1b[?1002l\x1b[?1000l"
 
@@ -86,6 +87,7 @@ static struct term {
 static bool init_from_terminfo = false;
 static const char **keys;
 static const char **funcs;
+static const char * term_name;
 
 static int try_compatible(const char *term, const char *name,
 			  const char **tkeys, const char **tfuncs)
@@ -105,6 +107,7 @@ static int init_term_builtin(void)
 	const char *term = getenv("TERM");
 
 	if (term) {
+    term_name = term;
 		for (i = 0; terms[i].name; i++) {
 			if (!strcmp(terms[i].name, term)) {
 				keys = terms[i].keys;
@@ -184,6 +187,8 @@ static char *load_terminfo(void) {
 	if (!term) {
 		return 0;
 	}
+
+  term_name = term;
 
 	// if TERMINFO is set, no other directory should be searched
 	const char *terminfo = getenv("TERMINFO");

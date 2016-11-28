@@ -614,8 +614,7 @@ void pretty_print_press(struct tb_event *ev)
 	printf_tb(60, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->ch);
 	printf_tb(60, 22, TB_RED   , TB_DEFAULT, "string:  %s", buf);
 
-	printf_tb(54, 18, TB_WHITE, TB_DEFAULT, "Modifier: %s",
-			(ev->mod) ? "TB_MOD_ALT" : "none");
+	printf_tb(54, 18, TB_WHITE, TB_DEFAULT, "Meta/mod: %d/%s", ev->meta, (ev->mod) ? "TB_MOD_ALT" : "none");
 
 }
 
@@ -651,6 +650,9 @@ void  pretty_print_mouse(struct tb_event *ev) {
 	counter++;
 	printf_tb(43, 19, TB_WHITE, TB_DEFAULT, "Key: ");
 	printf_tb(48, 19, TB_YELLOW, TB_DEFAULT, btn, counter);
+
+	printf_tb(43, 20, TB_WHITE, TB_DEFAULT, "Meta: %d ", ev->meta);
+
 }
 
 void dispatch_press(struct tb_event *ev)
@@ -724,7 +726,7 @@ int main(int argc, char **argv)
 			else
 				ctrlxpressed = 0;
 
-			tb_clear();
+			// tb_clear();
 			draw_keyboard();
 			dispatch_press(&ev);
 			pretty_print_press(&ev);
@@ -737,7 +739,7 @@ int main(int argc, char **argv)
 			tb_present();
 			break;
 		case TB_EVENT_MOUSE:
-			tb_clear();
+			// tb_clear();
 			draw_keyboard();
 			pretty_print_mouse(&ev);
 			tb_present();

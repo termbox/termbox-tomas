@@ -55,7 +55,8 @@ static void bytebuffer_resize(struct bytebuffer *b, int len) {
 }
 
 static void bytebuffer_flush(struct bytebuffer *b, int fd) {
-	write(fd, b->buf, b->len);
+  int unused __attribute__((unused));
+	unused = write(fd, b->buf, b->len);
 	bytebuffer_clear(b);
 }
 

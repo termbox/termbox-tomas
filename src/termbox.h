@@ -94,6 +94,17 @@ extern "C" {
 #define TB_KEY_BACKSPACE2       0x7F
 #define TB_KEY_CTRL_8           0x7F /* clash with 'BACKSPACE2' */
 
+enum {
+	TB_META_SHIFT = 2,
+	TB_META_ALT,
+	TB_META_ALTSHIFT,
+	TB_META_CTRL,
+	TB_META_CTRLSHIFT,
+	TB_META_ALTCTRL,
+	TB_META_ALTCTRLSHIFT,
+	TB_META_META
+};
+
 /* These are non-existing ones.
  *
  * #define TB_KEY_CTRL_1 clash with '1'
@@ -156,6 +167,7 @@ struct tb_event {
 	uint8_t mod; /* modifiers to either 'key' or 'ch' below */
 	uint16_t key; /* one of the TB_KEY_* constants */
 	uint32_t ch; /* unicode character */
+	uint8_t meta;
 	int32_t w;
 	int32_t h;
 	int32_t x;
