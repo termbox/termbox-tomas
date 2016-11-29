@@ -702,6 +702,8 @@ int main(int argc, char **argv)
 	int inputmode = 0;
 	int ctrlxpressed = 0;
 
+	tb_set_title("Keyboard demo");
+
 	while (tb_poll_event(&ev)) {
 		switch (ev.type) {
 		case TB_EVENT_KEY:

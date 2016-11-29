@@ -39,7 +39,8 @@ static struct bytebuffer input_buffer;
 static int termw = -1;
 static int termh = -1;
 
-static int inputmode = TB_INPUT_ESC;
+static bool title_set = false;
+static int inputmode  = TB_INPUT_ESC;
 static int outputmode = TB_OUTPUT_NORMAL;
 
 static int inout;
@@ -55,6 +56,7 @@ static uint16_t foreground = TB_DEFAULT;
 
 static void write_cursor(int x, int y);
 static void write_sgr(uint16_t fg, uint16_t bg);
+static void write_title(const char * title);
 
 static void cellbuf_init(struct cellbuf *buf, int width, int height);
 static void cellbuf_resize(struct cellbuf *buf, int width, int height);
@@ -155,6 +157,7 @@ void tb_shutdown(void)
 		abort();
 	}
 
+	if (title_set) write_title("");
 	bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
 	bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
 	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
@@ -236,6 +239,11 @@ void tb_set_cursor(int cx, int cy)
 	cursor_y = cy;
 	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
 		write_cursor(cursor_x, cursor_y);
+}
+
+void tb_set_title(const char * title) {
+	title_set = true;
+	write_title(title);
 }
 
 void tb_put_cell(int x, int y, const struct tb_cell *cell)
@@ -430,6 +438,10 @@ static void write_sgr(uint16_t fg, uint16_t bg) {
 		WRITE_LITERAL("m");
 		break;
 	}
+}
+
+static void write_title(const char * title) {
+	printf("%c]0;%s%c\n", '\033', title, '\007');
 }
 
 static void cellbuf_init(struct cellbuf *buf, int width, int height)

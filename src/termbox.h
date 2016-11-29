@@ -225,6 +225,7 @@ SO_IMPORT void tb_present(void);
  * is hidden by default.
  */
 SO_IMPORT void tb_set_cursor(int cx, int cy);
+SO_IMPORT void tb_set_title(const char * title);
 
 /* Changes cell's parameters in the internal back buffer at the specified
  * position.
