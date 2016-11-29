@@ -205,7 +205,7 @@ static bool parse_meta_key(struct tb_event *event, const char *buf, const char *
 	return true;
 }
 
-#define known_codes_length 30
+#define known_codes_length 32
 
 const char * known_codes[known_codes_length] = {
 	"\033[Z", // Shift+TAB
@@ -237,6 +237,8 @@ const char * known_codes[known_codes_length] = {
 	// mrxvt
 	// "\033[7;5~", // Ctrl+Home
 	// "\033[8;5~", // Ctrl+End
+  "\033[7~",  // Home
+  "\033[8~",  // End
 	"\033[5;6~", // CtrlShift+PageUp
 	"\033[6;6~", // CtrlShift+PageDown
 	"\033[7;6~", // CtrlShift+Home
@@ -280,6 +282,8 @@ int known_codes_keys[known_codes_length][2] = {
 	{ TB_KEY_ARROW_LEFT,  TB_META_CTRL  },
 
 	// mrxvt
+  { TB_KEY_HOME,        0 },
+  { TB_KEY_END,         0 },
 	{ TB_KEY_PGDN,        TB_META_CTRLSHIFT },
 	{ TB_KEY_PGUP,        TB_META_CTRLSHIFT },
 	{ TB_KEY_HOME,        TB_META_CTRLSHIFT },
@@ -307,7 +311,7 @@ static int parse_escape_seq(struct tb_event *event, const char *buf, int len)
   // printf("term: %s\n", term_name);
   int is_linux = strcmp(term_name, "linux") == 0 ? 1 : 0;
 
-  if (is_linux) {
+  if (!is_linux) {
 		for (i = 0; i < known_codes_length; i++) {
 			// printf("\nbuf: [%d] --> ", len); for (int a = 0; a < len; a++) { printf("%d ", buf[a]); }
 			if (starts_with(buf, len, known_codes[i])) {
