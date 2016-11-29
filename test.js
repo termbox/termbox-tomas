@@ -333,8 +333,8 @@ function doubleTrouble(orig, term) {
     if (last == 'Z') {
       return [ SHIFT, TAB ];
 
-    } else if ('A' <= last && last <= 'H') { // arrow keys linux and xterm
-      return [ NONE, last.charCodeAt(0) + 1000 ];
+//    } else if ('A' <= last && last <= 'H') { // arrow keys linux and xterm
+//      return [ NONE, last.charCodeAt(0) + 1000 ];
 
     } else if ('a' <= last && last <= 'd') { // mrxvt shift + left/right or ctrl+shift + up/down
 
@@ -348,9 +348,9 @@ function doubleTrouble(orig, term) {
       return [ meta, last.charCodeAt(0) + 968 ];
     }
 
-  } else if (seq.length == 3 && ('A' <= last && last <= 'Z')) { // F1-F5 xterm
+//  } else if (seq.length == 3 && ('A' <= last && last <= 'Z')) { // F1-F5 xterm
 
-      return [ NONE, last.charCodeAt(0) - 54 ];
+//      return [ NONE, last.charCodeAt(0) - 54 ];
 
   } else if (seq.length > 4) { // xterm shift or control + f1/keys/arrows
 
@@ -416,8 +416,8 @@ function doubleTrouble(orig, term) {
       return [ SHIFT, INSERT ];
 
     } else {
-      var num = seq.length == 4 ? Number(seq[2] + seq[3]) : Number(seq[2]);
-      return [ NONE , num ];
+      // var num = seq.length == 4 ? Number(seq[2] + seq[3]) : Number(seq[2]);
+      // return [ NONE , num ];
     }
 
   } else {
@@ -474,15 +474,18 @@ function parse(seq, term) {
         if (key == 49) { // xfce4
           key = seq.pop().charCodeAt(0);
           meta = CTRL_SHIFT;
+          return [ meta, key - 69 ];
+        } else {
+
         }
-        return [ meta, key - 69 ];
+        // return [ meta, key - 69 ];
       }
       break;
 
     case '^':
       if (seq[3] == '[') {
         if (!seq[4]) return [ ALT, ESCAPE ];
-        
+
         // urxvt territory
         var last = seq.pop();
 
@@ -1211,6 +1214,7 @@ function ok(res, key) {
 
 function test(keys, term) {
   for (var seq in keys) {
+    if (keys[seq][0] == NONE) continue;
     res = parse(seq, term);
 
     if (ok(res, keys[seq])) {

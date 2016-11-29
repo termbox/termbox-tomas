@@ -602,7 +602,7 @@ static void update_size(void)
 	send_clear();
 }
 
-static int parse_corchetes(struct tb_event *event, const char *seq, int len) {
+static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
   int last = seq[len-1];
   int res  = 0;
 
@@ -612,18 +612,21 @@ static int parse_corchetes(struct tb_event *event, const char *seq, int len) {
       event->meta = TB_META_SHIFT;
       event->key  = TB_KEY_TAB;
 
-    } else if ('A' <= last && last <= 'H') { // arrow keys linux and xterm
-      event->key = 0xFFFF - (last - 86);
+// not needed.
+//    } else if ('A' <= last && last <= 'H') { // arrow keys linux and xterm
+//      event->key = 0xFFFF - (last - 86);
 
     } else if ('a' <= last && last <= 'd') { // mrxvt shift + left/right or ctrl+shift + up/down
       // TODO: handle ctrl + shift + arrow in mrxvt
       event->meta = TB_META_SHIFT;
       event->key  = 0xFFFF - (last - 118);
+    } else {
+    	res = -1;
     }
 
-  } else if (len == 4 && ('A' <= last && last <= 'Z')) { // F1-F5 xterm
-
-      event->key = last - 54;
+//  not needed.
+//  } else if (len == 4 && ('A' <= last && last <= 'Z')) { // F1-F5 xterm
+//      event->key = last - 54;
 
   } else if (len > 5) { // xterm shift or control + f1/keys/arrows
 
@@ -684,7 +687,6 @@ static int parse_corchetes(struct tb_event *event, const char *seq, int len) {
           offset -= 1;
       }
 */
-
       event->meta = TB_META_SHIFT;
       event->key  = num - offset;
 
@@ -693,13 +695,16 @@ static int parse_corchetes(struct tb_event *event, const char *seq, int len) {
       event->key  = TB_KEY_INSERT;
 
     } else {
-      event->key = len == 5 ? ((int)seq[3] * 10 + (int)seq[4]) : (int)seq[3];
+    	// not needed.
+      // event->key = len == 5 ? ((int)seq[3] * 10 + (int)seq[4]) : (int)seq[3];
+      res = -1;
+
     }
 
   } else {
     res = -1;
   }
-  
+
   return res;
 }
 
@@ -712,22 +717,29 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 		printf("%d ", seq[i]);
 */
 
-  // event->meta = len;
   event->type = TB_EVENT_KEY;
-  // event->key  = TB_KEY_ARROW_DOWN;
+
+	int i;
+	for (i = 0; keys[i]; i++) {
+		if (starts_with(seq, len, keys[i])) {
+		  event->ch = 0;
+		  event->key = 0xFFFF-i;
+		  return 1; // strlen(keys[i]);
+		}
+  }
 
 	if (len == 1) {
 	  event->key  = TB_KEY_ESC;
     return 1;
-  } else if (len == 2) { // alt+char or alt+shift+char
+  } else if (len == 2) { // alt+char or alt+shift+char or  alt + enter
     event->meta = seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
-    event->ch   = seq[1];
+    event->ch   = seq[1] == 10 ? TB_KEY_ENTER : seq[1];
     return 1;
   }
 
 	switch(seq[1]) {
 		case '[':
-		  if (parse_corchetes(event, seq, len) == 0)
+		  if (parse_bracket_esc(event, seq, len) == 0)
 		    return 1;
 			break;
 
@@ -740,9 +752,10 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
         event->key  = 0xFFFF + (seq[len-1] - 80);
         event->meta = TB_META_CTRLSHIFT;
 
-      } else if (65 <= seq[2] && seq[2] <= 68) { // arrows xterm/mrxvt
-        event->key  = 0xFFFF + (seq[2] - 86);
-        event->meta = 0;
+// not needed. parsed previously.
+//      } else if (65 <= seq[2] && seq[2] <= 68) { // arrows xterm/mrxvt
+//        event->key  = 0xFFFF + (seq[2] - 86);
+//        event->meta = 0;
 
       } else { /* unknown */ }
 
@@ -750,14 +763,11 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 			break;
 
     case '^':
-      printf("here: %d %d\n", seq[2], seq[3]);
       if (seq[3] == '[') {
-        // TODO
-        // if (!seq[4]) return [ ALT, ESCAPE ];
 
         // urxvt territory
         int last = seq[len-1];
-        
+
         switch(last) {
           case 'R': // mrxvt alt + f3
             event->meta = TB_META_ALT;
@@ -786,7 +796,7 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
             } else {
               return -1;
             }
-    
+
             break;
         }
 
@@ -794,7 +804,7 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
         event->meta = TB_META_ALTCTRL;
         event->ch = seq[3];
       }
-      
+
       break;
 
 		default:
@@ -805,7 +815,7 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
   return 1;
 }
 
-int maxesc = 8;
+int maxseq = 8;
 int cutesc = 0;
 static char seq[8];
 
@@ -822,49 +832,65 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
   }
 
   seq[0] = c;
+	event->type = TB_EVENT_KEY;
 	tb_clear();
 
-  if (c != 27) { // regular key
+	if (c != 27 && 1 <= c && c <= 122) { // from ctrl-a to z, not esc
 
-    event->type = TB_EVENT_KEY;
     event->key  = c;
     return 1;
 
-  } else {
+  } else { // either esc or unicode
 
     nread = 1;
-    while (nread < maxesc) {
+    while (nread < maxseq) {
       rs = read(inout, seq + nread++, 1);
       if (rs == -1) return -1;
       if (rs == 0) break;
 
       if (seq[nread-1] == 27) { // found another escape char!
-        cutesc = 1;
-        break;
+      	if (seq[nread-2] == 27) { // double esc, meaning alt+esc
+      		event->key  = TB_KEY_ESC;
+      		event->meta = TB_META_ALT;
+      		return 1;
+      	} else {
+	        cutesc = 1;
+	        break;
+      	}
       }
     }
 
-    if (nread == maxesc) {
-    	return 0;
-    }
-    
+    if (nread == maxseq) return 0;
     seq[nread] = '\0';
 
-    int i, ch;
-  	// printf("\nseq [%d] --> ", nread); // key);
-    tb_change_cell(2, 1, nread + 48, TB_WHITE, TB_DEFAULT);
-    tb_change_cell(3, 1, ':', TB_WHITE, TB_DEFAULT);
+    if (c == 27) {
 
-  	for (i = 1; i < maxesc; i++) {
-  	  ch = i > nread ? ' ' : seq[i] > 0 ? seq[i] : '-';
-      tb_change_cell(4+i, 1, ch, TB_WHITE, TB_DEFAULT);
-  	}
+	    int i, ch;
+	  	// printf("\nseq [%d] --> ", nread); // key);
+	    tb_change_cell(2, 1, nread + 48, TB_WHITE, TB_DEFAULT);
+	    tb_change_cell(3, 1, ':', TB_WHITE, TB_DEFAULT);
 
-  	int mouse_parsed = parse_mouse_event(event, seq, nread-1);
-  	if (mouse_parsed != 0)
-  	  return mouse_parsed;
+	  	for (i = 1; i < maxseq; i++) {
+	  	  ch = i > nread ? ' ' : seq[i] > 0 ? seq[i] : '-';
+	      tb_change_cell(4+i, 1, ch, TB_WHITE, TB_DEFAULT);
+	  	}
 
-  	return parse_esc_seq(event, seq, nread-1);
+	  	int mouse_parsed = parse_mouse_event(event, seq, nread-1);
+	  	if (mouse_parsed != 0)
+	  	  return mouse_parsed;
+
+	  	return parse_esc_seq(event, seq, nread-1);
+
+    } else if (nread-1 >= tb_utf8_char_length(seq[0])) {
+			/* everything ok, fill event, pop buffer, return success */
+			tb_utf8_char_to_unicode(&event->ch, seq);
+			event->key = 0;
+			// bytebuffer_truncate(inbuf, tb_utf8_char_length(buf[0]));
+			return 1;
+		} else {
+			// unknown sequence
+			return -1;
+		}
   }
 }
 
@@ -903,18 +929,17 @@ static int read_up_to(int n) {
 }
 */
 
-static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
-{
-	// ;-)
-  // #define ENOUGH_DATA_FOR_PARSING 64
+static int wait_fill_event(struct tb_event *event, struct timeval *timeout) {
   int n;
 	fd_set events;
 	memset(event, 0, sizeof(struct tb_event));
 
-  // n = read_and_extract_event(event, inputmode);
-  // if (n < 0) return -1;
-  // if (n > 0) return event->type;
-  
+	if (cutesc) { // there's a part of an escape sequence left!
+	  n = read_and_extract_event(event, inputmode);
+	  if (n < 0) return -1;
+	  if (n > 0) return event->type;
+	}
+
   while (1) {
     FD_ZERO(&events);
     FD_SET(inout, &events);
@@ -922,7 +947,7 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
     int maxfd  = (winch_fds[0] > inout) ? winch_fds[0] : inout;
     int result = select(maxfd+1, &events, 0, 0, timeout);
     if (!result) return 0;
-  
+
     if (FD_ISSET(winch_fds[0], &events)) {
       event->type = TB_EVENT_RESIZE;
       int zzz = 0;
@@ -931,7 +956,7 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
       get_term_size(&event->w, &event->h);
       return TB_EVENT_RESIZE;
     }
-  
+
     if (FD_ISSET(inout, &events)) {
       n = read_and_extract_event(event, inputmode) > 0;
       if (n < 0) return -1;

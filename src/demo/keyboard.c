@@ -692,7 +692,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	tb_select_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+	// tb_select_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+	tb_select_input_mode(TB_INPUT_ESC);
 	struct tb_event ev;
 
 	tb_clear();
@@ -711,8 +712,9 @@ int main(int argc, char **argv)
 			if (ev.key == TB_KEY_CTRL_C) {
 				tb_shutdown();
 				return 0;
+			}
 
-			// if (ev.key == TB_KEY_CTRL_C && ctrlxpressed) {
+			if (ev.ch == TB_KEY_ENTER && ev.meta == TB_META_ALT) {
 				static int chmap[] = {
 					TB_INPUT_ESC | TB_INPUT_MOUSE, /* 101 */
 					TB_INPUT_ALT | TB_INPUT_MOUSE, /* 110 */
