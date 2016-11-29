@@ -838,7 +838,7 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
       if (rs == -1) return -1;
       if (rs == 0) break;
 
-      if (seq[nread-1] == 27) {
+      if (seq[nread-1] == 27) { // found another escape char!
         cutesc = 1;
         break;
       }
@@ -865,11 +865,10 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
   	  return mouse_parsed;
 
   	return parse_esc_seq(event, seq, nread-1);
-  	// return true;
   }
 }
 
-
+/*
 static int read_up_to(int n) {
 	assert(n > 0);
 	const int prevlen = input_buffer.len;
@@ -902,6 +901,7 @@ static int read_up_to(int n) {
 	assert(!"unreachable");
 	return 0;
 }
+*/
 
 static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
 {
