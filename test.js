@@ -253,10 +253,20 @@ stdin.on( 'data', function( key ){
 });
 */
 
-const NONE     = 0;
+const NONE       = 0;
+const SHIFT      = 2;
+const ALT        = 3;
+const ALT_SHIFT  = 4;
+const CTRL       = 5;
+const CTRL_SHIFT = 6;
+const CTRL_ALT   = 7;
+const CTRL_ALT_SHIFT = 8;
+
+/*
 const CTRL     = 100;
 const ALT      = 200;
 const SHIFT    = 300;
+*/
 
 const ESCAPE   = -1;
 const HOME     = 1;
@@ -294,57 +304,90 @@ const F10  = 21;
 const F11  = 23;
 const F12  = 24;
 
+var known_keys = {
+  // urxvt
+  '^[[3$'  : [ SHIFT, DELETE ],
+
+  // mrxvt
+  '^[[3~'  : [ SHIFT, INSERT ]
+}
+
 
 function doubleTrouble(orig, term) {
-  var seq   = Array.apply(null, orig);
+
+/*
+  for (var seq in known_keys) {
+    if (seq == orig.join('')) {
+      console.log('found', seq, orig)
+      return known_keys[seq];
+    }
+  };
+*/
+
+  var seq   = Array.apply(null, orig); // clone
   var first = seq.shift();
   var last  = seq.pop();
-  
+
   if (seq.length == 2) {
 
     if (last == 'Z') {
       return [ SHIFT, TAB ];
 
-    } else if ( 'A' <= last && last <= 'H') { // arrow keys linux and xterm
+    } else if ('A' <= last && last <= 'H') { // arrow keys linux and xterm
       return [ NONE, last.charCodeAt(0) + 1000 ];
 
     } else if ('a' <= last && last <= 'd') { // mrxvt shift + left/right or ctrl+shift + up/down
-      var meta = last == 'a' || last == 'b' ? CTRL | SHIFT : SHIFT;
+
+      // mrxvt sends this key combination for ctrl + shift + arrow, but urxvt sends it for shift + arrow
+      if (term == 'urxvt') {
+        var meta = SHIFT;
+      } else {
+        var meta = (last == 'a' || last == 'b') ? CTRL_SHIFT : SHIFT;
+      }
+
       return [ meta, last.charCodeAt(0) + 968 ];
     }
+
+  } else if (seq.length == 3 && ('A' <= last && last <= 'Z')) { // F1-F5 xterm
+
+      return [ NONE, last.charCodeAt(0) - 54 ];
 
   } else if (seq.length > 4) { // xterm shift or control + f1/keys/arrows
 
     if (last == '~') {
       // handle shift + delete case
       var num = (seq[3] == ';') ? Number(seq[2]) : Number(seq[2] + seq[3]);
-  
+
       // num may be two digit number, so meta key can be at index 4 or 5
-      var meta = (seq[4] == '5' || seq[5] == '5') ? CTRL
-               : (seq[4] == '3' || seq[5] == '3') ? ALT
-               : (seq[4] == '6' || seq[5] == '6') ? CTRL | SHIFT
-               : (seq[4] == '7' || seq[5] == '7') ? CTRL | ALT
-               : (seq[4] == '8' || seq[5] == '8') ? CTRL | ALT | SHIFT
-               : SHIFT;
-      
-      
+      var meta = '2' <= seq[4] && seq[4] <= '8' ? Number(seq[4])
+               : '2' <= seq[5] && seq[5] <= '8' ? Number(seq[5]) : 'INVALID';
+
       return [ meta, num ];
 
-    } else {
-      var key = last.charCodeAt(0);
-      var meta = seq[4] == '5' ? CTRL
-               : seq[4] == '3' ? ALT
-               : seq[4] == '6' ? CTRL | SHIFT
-               : seq[4] == '7' ? CTRL | ALT
-               : seq[4] == '8' ? CTRL | ALT | SHIFT
-               : SHIFT;
+    } else if ('A' <= last && last <= 'Z') {
+      var key  = last.charCodeAt(0);
+      var meta = Number(seq[4]);
 
       if (key >= 80) { // f1-f4 xterm
         return [ meta, key - 69 ];
-      } else {// ctrl + arrows urxvt
+      } else {  // ctrl + arrows urxvt
         return [ meta, key + 1000 ];
       }
 
+    } else {
+      console.log('nope');
+    }
+
+  } else if (last == '^' || last == '@' || last == '$') { // 3 or 4 in length
+
+    var num = seq.length == 4 ? Number(seq[2] + seq[3]) : Number(seq[2]);
+
+    if (num >= 25) { // ctrl + shift f1-f12 urxvt
+      var offset = num == 25 || num == 26 || num == 29 ? 12 : 13;
+      return [ CTRL_SHIFT, num - offset ];
+    } else {
+      var meta = last == '@' ? 6 : last.charCodeAt(0) >> 4;
+      return [ meta, num ];
     }
 
   } else if (last == '~') { // 3 or 4 in length
@@ -370,47 +413,14 @@ function doubleTrouble(orig, term) {
       return [ SHIFT , num - offset ];
 
     } else if (term == 'mrxvt' && seq[2] == 3) { // mrxvt shift + insert
-      return [ SHIFT , INSERT ];
+      return [ SHIFT, INSERT ];
 
     } else {
-      return [ NONE , Number(seq[2] + (seq[3] || '')) ];
+      var num = seq.length == 4 ? Number(seq[2] + seq[3]) : Number(seq[2]);
+      return [ NONE , num ];
     }
 
-
-  } else if (seq.length == 3) {
-
-    if ('A' <= last && last <= 'Z') { // // F1-F5 xterm
-      return [ NONE, last.charCodeAt(0) - 54 ];
-
-    } else if ('a' <= seq[2] && seq[2] <= 'z') { // shift + arrows urxvt
-      return [ SHIFT, seq[2].charCodeAt(0) + 968 ];
-
-    } else if (last == '^' || last == '@' || last == '$') { // shift, shift+control, control + key urxvt
-      var meta = last == '^' ? CTRL : last == '@' ? CTRL | SHIFT : SHIFT;
-      return [ meta, Number(seq[2]) ];
-
-    } else {
-      console.log('dont know', orig);
-    }
-
-  } else if (seq.length == 4) {
-  
-    if (last == '^' || last == '@' || last == '$') {
-      var num = Number(seq[2] + seq[3]);
-
-      if (num >= 25) { // ctrl + shift f1-f12 urxvt
-        var offset = num == 25 || num == 26 || num == 29 ? 12 : 13;
-        return [ CTRL | SHIFT, num - offset ];
-      } else {
-        var meta = last == '^' ? CTRL : last == '@' ? CTRL | SHIFT : SHIFT;
-        return [ meta, num ];
-      }
-    } else {
-      console.log('unknown suffix.', orig);
-    }
-      
   } else {
-
     console.log('unknown seq', orig);
   }
 }
@@ -441,49 +451,56 @@ function parse(seq, term) {
   switch(seq[2]) {
 
     case '[':
-      res = doubleTrouble(seq, term);
+      var res = doubleTrouble(seq, term);
       if (res) return res;
 
       break;
 
     case 'O':
       var key = seq[3].charCodeAt(0);
-      if (key < 90) { // f1-f4 xterm
-        return [ NONE, key - 69 ];
-      } else {        // ctrl + arrows urxvt
+      if (key > 96 && key < 101 ) { // ctrl + arrows mrxvt/urxvt
         return [ CTRL, key + 968 ];
+      } else { // xfce4 ctrl+shift f1-f4, or f1-f4 xterm/mrxvt
+        var meta = NONE;
+        if (key == 49) { // xfce4
+          key = seq.pop().charCodeAt(0);
+          meta = CTRL_SHIFT;
+        }
+        return [ meta, key - 69 ];
       }
       break;
 
     case '^':
       if (seq[3] == '[') {
         if (!seq[4]) return [ ALT, ESCAPE ];
-  
+
         // urxvt territory
         var last = seq.pop();
-  
-        if (last == '^' || last == '@') { // ctrl + alt + arrows
-          var meta = last == '^' ? CTRL | ALT : CTRL | ALT | SHIFT;
-          return [ meta, Number(seq[5]) ];
-  
-        } else if ('a' <= last && last <= 'z') { // urxvt ctr/alt arrow or ctr/shift/alt arrow
-          var meta = seq[4] == 'O' ? CTRL | ALT : CTRL | ALT | SHIFT;
-          return [meta, last.charCodeAt(0) + 968 ];
-  
-        } else if (last == '~') { // urxvt alt + key
-          return [ ALT, Number(seq[5] + (seq[6] || '')) ];
-  
-        } else if (last == 'R') {
+
+        if (last == 'R') {
           return [ ALT, F3 ]; // mrxvt alt + f3
-  
-        } else if (seq.length > 4) { // urxvt alt + arrow keys
-          return [ ALT, seq[5].charCodeAt(0) + 1000 ];
+
+        } else if (last == '~') { // urxvt alt + key
+          var num = seq.length == 7 ? Number(seq[5] + seq[6]) : Number(seq[5])
+          return [ ALT, num ];
+
+        } else if (last == '^' || last == '@') { // ctrl + alt + arrows
+          var meta = last == '^' ? CTRL_ALT : CTRL_ALT_SHIFT;
+          return [ meta, Number(seq[5]) ];
+
+        } else if ('a' <= last && last <= 'z') { // urxvt ctr/alt arrow or ctr/shift/alt arrow
+          var meta = seq[4] == 'O' ? CTRL_ALT : CTRL_ALT_SHIFT;
+          return [ meta, last.charCodeAt(0) + 968 ];
+
+        } else if ('A' <= last && last <= 'Z') { // urxvt alt + arrow keys
+          return [ ALT, last.charCodeAt(0) + 1000 ];
+
         } else {
-          console.log(seq)
+          console.log('nope', seq)
         }
-  
+
       } else if (seq[2] == '^') { // linux ctrl+alt+key
-        return [ CTRL | ALT, seq[3]]
+        return [ CTRL_ALT, seq[3]]
 
       } else {
         console.log('unknown', seq);
@@ -492,7 +509,7 @@ function parse(seq, term) {
     default:
       var letter = seq[2];
       if (letter >= 'A' && letter <= 'Z') {
-        return [ SHIFT | ALT, letter];
+        return [ ALT_SHIFT, letter];
       } else {
         return [ ALT, letter];
       }
@@ -506,8 +523,8 @@ var linux_keys = {
 
 '^A'  : [ CTRL, 'A' ],  // ctrl + a / ctrl + shift + a
 '^[a' : [ ALT,  'a' ],  // alt + a
-'^[A' : [ ALT | SHIFT, 'A' ], // alt + shift + a
-'^[^A': [ CTRL | ALT, 'A' ], // ctrl + alt + a
+'^[A' : [ ALT_SHIFT, 'A' ], // alt + shift + a
+'^[^A': [ CTRL_ALT, 'A' ], // ctrl + alt + a
 
 '^[[1~': [ NONE, HOME], // home
 '^[[2~': [ NONE, INSERT ], // ins
@@ -550,7 +567,7 @@ var linux_keys = {
 
 var urxvt_keys = {
   // ---- no meta
-  
+
   '^[[11~' : [ NONE, F1 ], // f1
   '^[[12~' : [ NONE, F2 ], // f2
   '^[[13~' : [ NONE, F3 ], // f3
@@ -575,7 +592,7 @@ var urxvt_keys = {
   '^[[C'   : [ NONE, RIGHT ], // right
   '^[[D'   : [ NONE, LEFT ], // left
 
-  
+
   // ---- shift
   // these override f11 and f12 !
   // '^[[23~' : [ SHIFT, F1 ], // f1
@@ -590,20 +607,20 @@ var urxvt_keys = {
   '^[[34~' : [ SHIFT, F10 ],
   '^[[23$' : [ SHIFT, F11 ],
   '^[[24$' : [ SHIFT, F12 ], // f12
-  
+
   // insert does something weird
   '^[[3$'  : [ SHIFT, DELETE ], // delete
   // pageup scrolls
   // pagedn scrolls
   '^[[7$'  : [ SHIFT, HOME2 ], // home
   '^[[8$'  : [ SHIFT, END2 ], // end
-  '^[[a '  : [ SHIFT, UP ], // up
-  '^[[b '  : [ SHIFT, DOWN ], // down
-  '^[[c '  : [ SHIFT, RIGHT ], // right
-  '^[[d '  : [ SHIFT, LEFT ], // left
+  '^[[a'  : [ SHIFT, UP ], // up
+  '^[[b'  : [ SHIFT, DOWN ], // down
+  '^[[c'  : [ SHIFT, RIGHT ], // right
+  '^[[d'  : [ SHIFT, LEFT ], // left
 
   // ---- ctrl
-  
+
   '^[[11^' : [ CTRL, F1 ], // f1
   '^[[12^' : [ CTRL, F2 ], // f2
   '^[[13^' : [ CTRL, F3 ], // f3
@@ -617,7 +634,7 @@ var urxvt_keys = {
   '^[[23^' : [ CTRL, F11 ], // f11
   '^[[24^' : [ CTRL, F12 ], // f12
 
-  
+
   '^[[2^'  : [ CTRL, INSERT ], // insert
   '^[[3^'  : [ CTRL, DELETE ], // delete
   '^[[5^'  : [ CTRL, PAGEUP ], // pageup
@@ -630,9 +647,9 @@ var urxvt_keys = {
   '^[Od'  :  [ CTRL, LEFT ],  // left
 
   // ---- alt
-  
+
   '^[^['  : [ ALT, ESCAPE ],  // esc
-  
+
   // f1 system menu
   // f2 app menu
   '^[^[[13~' : [ ALT, F3 ], // f3
@@ -645,82 +662,82 @@ var urxvt_keys = {
   '^[^[[21~' : [ ALT, F10 ], // f10
   '^[^[[23~' : [ ALT, F11 ], // f11
   '^[^[[24~' : [ ALT, F12 ], // f12
-  
+
   '^[^[[2~'  : [ ALT, INSERT ],  // ins
   '^[^[[3~'  : [ ALT, DELETE ],  // del
   '^[^[[5~'  : [ ALT, PAGEUP ],  // pup
   '^[^[[6~'  : [ ALT, PAGEDOWN ],  // pdn
   '^[^[[7~'  : [ ALT, HOME2 ],  // home
   '^[^[[8~'  : [ ALT, END2 ],  // end
-  '^[^[[A '  : [ ALT, UP ],  // up
-  '^[^[[B '  : [ ALT, DOWN ],  // down
-  '^[^[[C '  : [ ALT, RIGHT ],  // right
-  '^[^[[D '  : [ ALT, LEFT ],  // left
+  '^[^[[A'  : [ ALT, UP ],  // up
+  '^[^[[B'  : [ ALT, DOWN ],  // down
+  '^[^[[C'  : [ ALT, RIGHT ],  // right
+  '^[^[[D'  : [ ALT, LEFT ],  // left
 
   // ---- ctrl + shift
-  
-  // overwrites ctrl + f11/f12
-  // '^[[23^'   : [ CTRL | SHIFT, F1 ], // f1
-  // '^[[24^'   : [ CTRL | SHIFT, F2 ],
 
-  '^[[25^'   : [ CTRL | SHIFT, F3 ],
-  '^[[26^'   : [ CTRL | SHIFT, F4 ],
-  '^[[28^'   : [ CTRL | SHIFT, F5 ],
-  '^[[29^'   : [ CTRL | SHIFT, F6 ],
-  '^[[31^'   : [ CTRL | SHIFT, F7 ],
-  '^[[32^'   : [ CTRL | SHIFT, F8 ],
-  '^[[33^'   : [ CTRL | SHIFT, F9 ],
-  '^[[34^'   : [ CTRL | SHIFT, F10 ],
-  '^[[23@'   : [ CTRL | SHIFT, F11 ],
-  '^[[24@'   : [ CTRL | SHIFT, F12 ], // f12
-  
-  '^[[2@'    : [ CTRL | SHIFT, INSERT ],   // ins
-  '^[[3@'    : [ CTRL | SHIFT, DELETE ],   // del
-  '^[[5@'    : [ CTRL | SHIFT, PAGEUP ],   // pup
-  '^[[6@'    : [ CTRL | SHIFT, PAGEDOWN ],   // pdn
-  '^[[7@'    : [ CTRL | SHIFT, HOME2 ],   // home
-  '^[[8@'    : [ CTRL | SHIFT, END2 ],   // end
-  
+  // overwrites ctrl + f11/f12
+  // '^[[23^'   : [ CTRL_SHIFT, F1 ], // f1
+  // '^[[24^'   : [ CTRL_SHIFT, F2 ],
+
+  '^[[25^'   : [ CTRL_SHIFT, F3 ],
+  '^[[26^'   : [ CTRL_SHIFT, F4 ],
+  '^[[28^'   : [ CTRL_SHIFT, F5 ],
+  '^[[29^'   : [ CTRL_SHIFT, F6 ],
+  '^[[31^'   : [ CTRL_SHIFT, F7 ],
+  '^[[32^'   : [ CTRL_SHIFT, F8 ],
+  '^[[33^'   : [ CTRL_SHIFT, F9 ],
+  '^[[34^'   : [ CTRL_SHIFT, F10 ],
+  '^[[23@'   : [ CTRL_SHIFT, F11 ],
+  '^[[24@'   : [ CTRL_SHIFT, F12 ], // f12
+
+  '^[[2@'    : [ CTRL_SHIFT, INSERT ],   // ins
+  '^[[3@'    : [ CTRL_SHIFT, DELETE ],   // del
+  '^[[5@'    : [ CTRL_SHIFT, PAGEUP ],   // pup
+  '^[[6@'    : [ CTRL_SHIFT, PAGEDOWN ],   // pdn
+  '^[[7@'    : [ CTRL_SHIFT, HOME2 ],   // home
+  '^[[8@'    : [ CTRL_SHIFT, END2 ],   // end
+
   // same as shift + arrows
-  // '^[[a '    : [ CTRL | SHIFT, UP ],   // up
-  // '^[[b '    : [ CTRL | SHIFT, DOWN ],   // down
-  // '^[[c '    : [ CTRL | SHIFT, RIGHT ],   // right
-  // '^[[d '    : [ CTRL | SHIFT, LEFT ],   // left
+  // '^[[a '    : [ CTRL_SHIFT, UP ],   // up
+  // '^[[b '    : [ CTRL_SHIFT, DOWN ],   // down
+  // '^[[c '    : [ CTRL_SHIFT, RIGHT ],   // right
+  // '^[[d '    : [ CTRL_SHIFT, LEFT ],   // left
 
   // ---- ctrl + alt
-  
+
   // f1-f12 changes tty
-  
-  '^[^[[2^'  : [ CTRL | ALT, INSERT ],  // ins
-  '^[^[[3^'  : [ CTRL | ALT, DELETE ],
-  '^[^[[5^'  : [ CTRL | ALT, PAGEUP ],
-  '^[^[[6^'  : [ CTRL | ALT, PAGEDOWN ],
-  '^[^[[7^'  : [ CTRL | ALT, HOME2 ],
-  '^[^[[8^'  : [ CTRL | ALT, END2 ],
-  '^[^[Oa'  : [ CTRL | ALT,  UP ],
-  '^[^[Ob'  : [ CTRL | ALT,  DOWN ],
-  '^[^[Oc'  : [ CTRL | ALT,  RIGHT ],
-  '^[^[Od'  : [ CTRL | ALT,  LEFT ],
-  
+
+  '^[^[[2^'  : [ CTRL_ALT, INSERT ],  // ins
+  '^[^[[3^'  : [ CTRL_ALT, DELETE ],
+  '^[^[[5^'  : [ CTRL_ALT, PAGEUP ],
+  '^[^[[6^'  : [ CTRL_ALT, PAGEDOWN ],
+  '^[^[[7^'  : [ CTRL_ALT, HOME2 ],
+  '^[^[[8^'  : [ CTRL_ALT, END2 ],
+  '^[^[Oa'  : [ CTRL_ALT,  UP ],
+  '^[^[Ob'  : [ CTRL_ALT,  DOWN ],
+  '^[^[Oc'  : [ CTRL_ALT,  RIGHT ],
+  '^[^[Od'  : [ CTRL_ALT,  LEFT ],
+
   // ---- ctrl + shift + alt
-  
+
   // f1-f12 changes tty
-  
-  '^[^[[2@' : [ CTRL | ALT | SHIFT, INSERT ], // ins
-  '^[^[[3@' : [ CTRL | ALT | SHIFT, DELETE ], // del
-  '^[^[[5@' : [ CTRL | ALT | SHIFT, PAGEUP ], // pageup
-  '^[^[[6@' : [ CTRL | ALT | SHIFT, PAGEDOWN ], // pagedn
-  '^[^[[7@' : [ CTRL | ALT | SHIFT, HOME2 ], // home
-  '^[^[[8@' : [ CTRL | ALT | SHIFT, END2 ], // end
-  '^[^[[a'  : [ CTRL | ALT | SHIFT, UP ], // up
-  '^[^[[b'  : [ CTRL | ALT | SHIFT, DOWN ], // down
-  '^[^[[c'  : [ CTRL | ALT | SHIFT, RIGHT ], // right
-  '^[^[[d'  : [ CTRL | ALT | SHIFT, LEFT ] // left
+
+  '^[^[[2@' : [ CTRL_ALT_SHIFT, INSERT ], // ins
+  '^[^[[3@' : [ CTRL_ALT_SHIFT, DELETE ], // del
+  '^[^[[5@' : [ CTRL_ALT_SHIFT, PAGEUP ], // pageup
+  '^[^[[6@' : [ CTRL_ALT_SHIFT, PAGEDOWN ], // pagedn
+  '^[^[[7@' : [ CTRL_ALT_SHIFT, HOME2 ], // home
+  '^[^[[8@' : [ CTRL_ALT_SHIFT, END2 ], // end
+  '^[^[[a'  : [ CTRL_ALT_SHIFT, UP ], // up
+  '^[^[[b'  : [ CTRL_ALT_SHIFT, DOWN ], // down
+  '^[^[[c'  : [ CTRL_ALT_SHIFT, RIGHT ], // right
+  '^[^[[d'  : [ CTRL_ALT_SHIFT, LEFT ] // left
 };
 
 var mrxvt_keys = {
   // ---- no meta
-  
+
   '^[OP' : [ NONE, F1 ], // f1
   '^[OQ' : [ NONE, F2 ], // f2
   '^[OR' : [ NONE, F3 ], // f3
@@ -745,11 +762,11 @@ var mrxvt_keys = {
   '^[[C'   : [ NONE, RIGHT ], // right
   '^[[D'   : [ NONE, LEFT ], // left
 
-  
+
   // ---- shift
-  
+
   '^[[Z'   : [ SHIFT, TAB ],
-  
+
   // these override f11 and f12 !
   // '^[[23~' : [ SHIFT, F1 ], // f1
   // '^[[24~' : [ SHIFT, F2 ],
@@ -763,7 +780,7 @@ var mrxvt_keys = {
   '^[[34~' : [ SHIFT, F10 ],
   '^[[23$' : [ SHIFT, F11 ],
   '^[[24$' : [ SHIFT, F12 ], // f12
-  
+
   '^[[3~'  : [ SHIFT, INSERT ], // insert
   '^[[3$'  : [ SHIFT, DELETE ], // delete
   // pageup scrolls
@@ -772,13 +789,13 @@ var mrxvt_keys = {
   // end changes font size
   // up scrolls line
   // down scrolls line
-  '^[[c '  : [ SHIFT, RIGHT ], // right
-  '^[[d '  : [ SHIFT, LEFT ], // left
+  '^[[c'  : [ SHIFT, RIGHT ], // right
+  '^[[d'  : [ SHIFT, LEFT ], // left
 
   // ---- ctrl
-  
+
   // f1-f12 same as no meta
-  
+
   '^[[2^'  : [ CTRL, INSERT ], // insert
   '^[[3^'  : [ CTRL, DELETE ], // delete
   '^[[5^'  : [ CTRL, PAGEUP ], // pageup
@@ -791,9 +808,9 @@ var mrxvt_keys = {
   '^[Od'  :  [ CTRL, LEFT ],  // left
 
   // ---- alt
-  
+
   '^[^['  : [ ALT, ESCAPE ],  // esc
-  
+
   // f1 system menu
   // f2 app menu
   '^[^[OR'   : [ ALT, F3 ], // f3
@@ -806,79 +823,79 @@ var mrxvt_keys = {
   '^[^[[21~' : [ ALT, F10 ], // f10
   '^[^[[23~' : [ ALT, F11 ], // f11
   '^[^[[24~' : [ ALT, F12 ], // f12
-  
+
   '^[^[[2~'  : [ ALT, INSERT ],  // ins
   '^[^[[3~'  : [ ALT, DELETE ],  // del
   '^[^[[5~'  : [ ALT, PAGEUP ],  // pup
   '^[^[[6~'  : [ ALT, PAGEDOWN ],  // pdn
   '^[^[[7~'  : [ ALT, HOME2 ],  // home
   '^[^[[8~'  : [ ALT, END2 ],  // end
-  '^[^[[A '  : [ ALT, UP ],  // up
-  '^[^[[B '  : [ ALT, DOWN ],  // down
-  '^[^[[C '  : [ ALT, RIGHT ],  // right
-  '^[^[[D '  : [ ALT, LEFT ],  // left
+  '^[^[[A'  : [ ALT, UP ],  // up
+  '^[^[[B'  : [ ALT, DOWN ],  // down
+  '^[^[[C'  : [ ALT, RIGHT ],  // right
+  '^[^[[D'  : [ ALT, LEFT ],  // left
 
   // ---- ctrl + shift
-  
-  // overwrites ctrl + f11/f12
-  // '^[[23^'   : [ CTRL | SHIFT, F1 ], // f1
-  // '^[[24^'   : [ CTRL | SHIFT, F2 ],
 
-  '^[[25^'   : [ CTRL | SHIFT, F3 ],
-  '^[[26^'   : [ CTRL | SHIFT, F4 ],
-  '^[[28^'   : [ CTRL | SHIFT, F5 ],
-  '^[[29^'   : [ CTRL | SHIFT, F6 ],
-  '^[[31^'   : [ CTRL | SHIFT, F7 ],
-  '^[[32^'   : [ CTRL | SHIFT, F8 ],
-  '^[[33^'   : [ CTRL | SHIFT, F9 ],
-  '^[[34^'   : [ CTRL | SHIFT, F10 ],
-  '^[[23@'   : [ CTRL | SHIFT, F11 ],
-  '^[[24@'   : [ CTRL | SHIFT, F12 ], // f12
-  
-  '^[[2@'    : [ CTRL | SHIFT, INSERT ],   // ins
-  '^[[3@'    : [ CTRL | SHIFT, DELETE ],   // del
+  // overwrites ctrl + f11/f12
+  // '^[[23^'   : [ CTRL_SHIFT, F1 ], // f1
+  // '^[[24^'   : [ CTRL_SHIFT, F2 ],
+
+  '^[[25^'   : [ CTRL_SHIFT, F3 ],
+  '^[[26^'   : [ CTRL_SHIFT, F4 ],
+  '^[[28^'   : [ CTRL_SHIFT, F5 ],
+  '^[[29^'   : [ CTRL_SHIFT, F6 ],
+  '^[[31^'   : [ CTRL_SHIFT, F7 ],
+  '^[[32^'   : [ CTRL_SHIFT, F8 ],
+  '^[[33^'   : [ CTRL_SHIFT, F9 ],
+  '^[[34^'   : [ CTRL_SHIFT, F10 ],
+  '^[[23@'   : [ CTRL_SHIFT, F11 ],
+  '^[[24@'   : [ CTRL_SHIFT, F12 ], // f12
+
+  '^[[2@'    : [ CTRL_SHIFT, INSERT ],   // ins
+  '^[[3@'    : [ CTRL_SHIFT, DELETE ],   // del
   // pageup scrolls
   // pagedn scrolls
-  '^[[7@'    : [ CTRL | SHIFT, HOME2 ],   // home
-  '^[[8@'    : [ CTRL | SHIFT, END2 ],   // end
-  
-  '^[[a'     : [ CTRL | SHIFT, UP ],   // up
-  '^[[b'     : [ CTRL | SHIFT, DOWN ],   // down
+  '^[[7@'    : [ CTRL_SHIFT, HOME2 ],   // home
+  '^[[8@'    : [ CTRL_SHIFT, END2 ],   // end
+
+  '^[[a'     : [ CTRL_SHIFT, UP ],   // up
+  '^[[b'     : [ CTRL_SHIFT, DOWN ],   // down
   // right nothing
   // left nothing
 
   // ---- ctrl + alt
-  
+
   // f1-f12 changes tty
-  '^[^[[2^'  : [ CTRL | ALT, INSERT ],  // ins
-  '^[^[[3^'  : [ CTRL | ALT, DELETE ],
-  '^[^[[5^'  : [ CTRL | ALT, PAGEUP ],
-  '^[^[[6^'  : [ CTRL | ALT, PAGEDOWN ],
-  '^[^[[7^'  : [ CTRL | ALT, HOME2 ],
-  '^[^[[8^'  : [ CTRL | ALT, END2 ],
-  '^[^[Oa'  : [ CTRL | ALT,  UP ],
-  '^[^[Ob'  : [ CTRL | ALT,  DOWN ],
-  '^[^[Oc'  : [ CTRL | ALT,  RIGHT ],
-  '^[^[Od'  : [ CTRL | ALT,  LEFT ],
-  
+  '^[^[[2^'  : [ CTRL_ALT, INSERT ],  // ins
+  '^[^[[3^'  : [ CTRL_ALT, DELETE ],
+  '^[^[[5^'  : [ CTRL_ALT, PAGEUP ],
+  '^[^[[6^'  : [ CTRL_ALT, PAGEDOWN ],
+  '^[^[[7^'  : [ CTRL_ALT, HOME2 ],
+  '^[^[[8^'  : [ CTRL_ALT, END2 ],
+  '^[^[Oa'  : [ CTRL_ALT,  UP ],
+  '^[^[Ob'  : [ CTRL_ALT,  DOWN ],
+  '^[^[Oc'  : [ CTRL_ALT,  RIGHT ],
+  '^[^[Od'  : [ CTRL_ALT,  LEFT ],
+
   // ---- ctrl + shift + alt
-  
+
   // f1-f12 changes tty
-  '^[^[[2@' : [ CTRL | ALT | SHIFT, INSERT ], // ins
-  '^[^[[3@' : [ CTRL | ALT | SHIFT, DELETE ], // del
+  '^[^[[2@' : [ CTRL_ALT_SHIFT, INSERT ], // ins
+  '^[^[[3@' : [ CTRL_ALT_SHIFT, DELETE ], // del
   // pageup scrolls
   // pagedn scrolls
-  '^[^[[7@' : [ CTRL | ALT | SHIFT, HOME2 ], // home
-  '^[^[[8@' : [ CTRL | ALT | SHIFT, END2 ], // end
-  '^[^[[a'  : [ CTRL | ALT | SHIFT, UP ], // up
-  '^[^[[b'  : [ CTRL | ALT | SHIFT, DOWN ], // down
-  '^[^[[c'  : [ CTRL | ALT | SHIFT, RIGHT ], // right
-  '^[^[[d'  : [ CTRL | ALT | SHIFT, LEFT ] // left
+  '^[^[[7@' : [ CTRL_ALT_SHIFT, HOME2 ], // home
+  '^[^[[8@' : [ CTRL_ALT_SHIFT, END2 ], // end
+  '^[^[[a'  : [ CTRL_ALT_SHIFT, UP ], // up
+  '^[^[[b'  : [ CTRL_ALT_SHIFT, DOWN ], // down
+  '^[^[[c'  : [ CTRL_ALT_SHIFT, RIGHT ], // right
+  '^[^[[d'  : [ CTRL_ALT_SHIFT, LEFT ] // left
 }
 
 var xterm_keys = {
   // ---- no meta
-  
+
   '^[OP' :   [ NONE, F1  ],   // f1
   '^[OQ' :   [ NONE, F2  ],   // f2
   '^[OR' :   [ NONE, F3  ],   // f3
@@ -903,7 +920,7 @@ var xterm_keys = {
   '^[[D' :   [ NONE, LEFT ],  // left
 
   // ---- shift
-  
+
   '^[[1;2P' :  [ SHIFT, F1 ], // f1
   '^[[1;2Q' :  [ SHIFT, F2 ],
   '^[[1;2R' :  [ SHIFT, F3 ],
@@ -928,7 +945,7 @@ var xterm_keys = {
   '^[[1;2D' : [ SHIFT, LEFT ], // right
 
   // ---- ctrl
-  
+
   '^[[1;5P'  : [ CTRL, F1 ], // f1
   '^[[1;5Q'  : [ CTRL, F2 ],
   '^[[1;5R'  : [ CTRL, F3 ],
@@ -953,7 +970,7 @@ var xterm_keys = {
   '^[[1;5D'  : [ CTRL, LEFT ],
 
   // ---- alt
-  
+
   '^[^[' : [ ALT, ESCAPE ],  // esc
   // f1 system menu
   // f2 app menu
@@ -979,59 +996,207 @@ var xterm_keys = {
   '^[[1;3D'  : [ ALT, LEFT ], // left
 
   // ---- ctrl + shift
-  
-  '^[[1;6P'  : [ CTRL | SHIFT, F1 ], // f1
-  '^[[1;6Q'  : [ CTRL | SHIFT, F2 ],
-  '^[[1;6R'  : [ CTRL | SHIFT, F3 ],
-  '^[[1;6S'  : [ CTRL | SHIFT, F4 ],
-  '^[[15;6~' : [ CTRL | SHIFT, F5 ],
-  '^[[17;6~' : [ CTRL | SHIFT, F6 ],
-  '^[[18;6~' : [ CTRL | SHIFT, F7 ],
-  '^[[19;6~' : [ CTRL | SHIFT, F8 ],
-  '^[[20;6~' : [ CTRL | SHIFT, F9 ],
-  '^[[21;6~' : [ CTRL | SHIFT, F10 ],
-  '^[[23;6~' : [ CTRL | SHIFT, F11 ],
-  '^[[24;6~' : [ CTRL | SHIFT, F12 ], // f12
+
+  '^[[1;6P'  : [ CTRL_SHIFT, F1 ], // f1
+  '^[[1;6Q'  : [ CTRL_SHIFT, F2 ],
+  '^[[1;6R'  : [ CTRL_SHIFT, F3 ],
+  '^[[1;6S'  : [ CTRL_SHIFT, F4 ],
+  '^[[15;6~' : [ CTRL_SHIFT, F5 ],
+  '^[[17;6~' : [ CTRL_SHIFT, F6 ],
+  '^[[18;6~' : [ CTRL_SHIFT, F7 ],
+  '^[[19;6~' : [ CTRL_SHIFT, F8 ],
+  '^[[20;6~' : [ CTRL_SHIFT, F9 ],
+  '^[[21;6~' : [ CTRL_SHIFT, F10 ],
+  '^[[23;6~' : [ CTRL_SHIFT, F11 ],
+  '^[[24;6~' : [ CTRL_SHIFT, F12 ], // f12
   // ins weirdness
-  '^[[3;6~'  : [ CTRL | SHIFT, DELETE ], // del
+  '^[[3;6~'  : [ CTRL_SHIFT, DELETE ], // del
   // pageup scrolls
   // pagedn scrolls
-  '^[[1;6H'  : [ CTRL | SHIFT, HOME3 ], // home
-  '^[[1;6F'  : [ CTRL | SHIFT, END3 ], // end
-  '^[[1;6A'  : [ CTRL | SHIFT, UP ], // up
-  '^[[1;6B'  : [ CTRL | SHIFT, DOWN ], // down
-  '^[[1;6C'  : [ CTRL | SHIFT, RIGHT ], // right
-  '^[[1;6D'  : [ CTRL | SHIFT, LEFT ], // left
+  '^[[1;6H'  : [ CTRL_SHIFT, HOME3 ], // home
+  '^[[1;6F'  : [ CTRL_SHIFT, END3 ], // end
+  '^[[1;6A'  : [ CTRL_SHIFT, UP ], // up
+  '^[[1;6B'  : [ CTRL_SHIFT, DOWN ], // down
+  '^[[1;6C'  : [ CTRL_SHIFT, RIGHT ], // right
+  '^[[1;6D'  : [ CTRL_SHIFT, LEFT ], // left
 
   // ---- ctrl + alt
-  
+
   // f1-f12 changes tty
-  
-  '^[[2;7~'  : [ CTRL | ALT, INSERT ],  // ins
-  '^[[3;7~'  : [ CTRL | ALT, DELETE ],
-  '^[[5;7~'  : [ CTRL | ALT, PAGEUP ],
-  '^[[6;7~'  : [ CTRL | ALT, PAGEDOWN ],
-  '^[[1;7H'  : [ CTRL | ALT, HOME3 ],
-  '^[[1;7F'  : [ CTRL | ALT, END3 ],
-  '^[[1;7A'  : [ CTRL | ALT, UP ],  // up
-  '^[[1;7B'  : [ CTRL | ALT, DOWN ],
-  '^[[1;7C'  : [ CTRL | ALT, RIGHT ],
-  '^[[1;7D'  : [ CTRL | ALT, LEFT ],  // left
-  
+
+  '^[[2;7~'  : [ CTRL_ALT, INSERT ],  // ins
+  '^[[3;7~'  : [ CTRL_ALT, DELETE ],
+  '^[[5;7~'  : [ CTRL_ALT, PAGEUP ],
+  '^[[6;7~'  : [ CTRL_ALT, PAGEDOWN ],
+  '^[[1;7H'  : [ CTRL_ALT, HOME3 ],
+  '^[[1;7F'  : [ CTRL_ALT, END3 ],
+  '^[[1;7A'  : [ CTRL_ALT, UP ],  // up
+  '^[[1;7B'  : [ CTRL_ALT, DOWN ],
+  '^[[1;7C'  : [ CTRL_ALT, RIGHT ],
+  '^[[1;7D'  : [ CTRL_ALT, LEFT ],  // left
+
   // ---- ctrl + shift + alt
-  
+
   // f1-f12 changes tty
-  
+
   // ins weirdness
-  '^[[3;8~'  : [ CTRL | SHIFT | ALT, DELETE ], // del
+  '^[[3;8~'  : [ CTRL_ALT_SHIFT, DELETE ], // del
   // pageup scrolls
   // pagedn scrolls
-  '^[[1;8H'  : [ CTRL | SHIFT | ALT, HOME3 ], // home
-  '^[[1;8F'  : [ CTRL | SHIFT | ALT, END3 ], // end
-  '^[[1;8A'  : [ CTRL | SHIFT | ALT, UP ], // up
-  '^[[1;8B'  : [ CTRL | SHIFT | ALT, DOWN ], // down
-  '^[[1;8C'  : [ CTRL | SHIFT | ALT, RIGHT ], // right
-  '^[[1;8D'  : [ CTRL | SHIFT | ALT, LEFT ] // left
+  '^[[1;8H'  : [ CTRL_ALT_SHIFT, HOME3 ], // home
+  '^[[1;8F'  : [ CTRL_ALT_SHIFT, END3 ], // end
+  '^[[1;8A'  : [ CTRL_ALT_SHIFT, UP ], // up
+  '^[[1;8B'  : [ CTRL_ALT_SHIFT, DOWN ], // down
+  '^[[1;8C'  : [ CTRL_ALT_SHIFT, RIGHT ], // right
+  '^[[1;8D'  : [ CTRL_ALT_SHIFT, LEFT ] // left
+}
+
+var xfce4_keys = {
+
+  '^[OP' :   [ NONE, F1  ],   // f1 - shows help
+  '^[OQ' :   [ NONE, F2  ],   // f2
+  '^[OR' :   [ NONE, F3  ],   // f3
+  '^[OS' :   [ NONE, F4  ],   // f4
+  '^[[15~' : [ NONE, F5  ],  // f5
+  '^[[17~' : [ NONE, F6  ],  // f6
+  '^[[18~' : [ NONE, F7  ],  // f7
+  '^[[19~' : [ NONE, F8  ],  // f8
+  '^[[20~' : [ NONE, F9  ],  // f9
+  '^[[21~' : [ NONE, F10 ],  // f10
+  '^[[23~' : [ NONE, F11 ],  // f11 - toggles fullscreen
+  '^[[24~' : [ NONE, F12 ],  // f12
+  '^[[2~'  : [ NONE, INSERT ], // insert
+  '^[[3~'  : [ NONE, DELETE ], // delete
+  '^[[5~'  : [ NONE, PAGEUP ], // pageup
+  '^[[6~'  : [ NONE, PAGEDOWN ], // pagedown
+  '^[OH' :   [ NONE, HOME3 ],  // home
+  '^[OF' :   [ NONE, END3 ],  // end
+  '^[[A' :   [ NONE, UP ],  // up
+  '^[[B' :   [ NONE, DOWN ],  // down
+  '^[[C' :   [ NONE, RIGHT ],  // right
+  '^[[D' :   [ NONE, LEFT ],  // left
+
+  // ---- shift
+
+  '^[[1;2P' :  [ SHIFT, F1 ], // f1
+  '^[[1;2Q' :  [ SHIFT, F2 ],
+  '^[[1;2R' :  [ SHIFT, F3 ],
+  '^[[1;2S' :  [ SHIFT, F4 ],
+  '^[[15;2~' : [ SHIFT, F5 ],
+  '^[[17;2~' : [ SHIFT, F6 ],
+  '^[[18;2~' : [ SHIFT, F7 ],
+  '^[[19;2~' : [ SHIFT, F8 ],
+  '^[[20;2~' : [ SHIFT, F9 ],
+  '^[[21;2~' : [ SHIFT, F10 ],
+  '^[[23;2~' : [ SHIFT, F11 ],
+  '^[[24;2~' : [ SHIFT, F12 ],  // f12
+  // insert pastes
+  '^[[3;2~': [ SHIFT, DELETE ],  // delete
+  // pageup scrolls
+  // pagedn scrolls
+  // home scrolls
+  // end scrolls
+  '^[[1;2A' : [ SHIFT, UP ], // up
+  '^[[1;2B' : [ SHIFT, DOWN ], // down
+  '^[[1;2C' : [ SHIFT, RIGHT ], // left
+  '^[[1;2D' : [ SHIFT, LEFT ], // right
+
+  // ---- ctrl
+
+  // f1-f12 blinks, nothing
+
+  // ins not working
+  '^[[3;5~'  : [ CTRL, DELETE ],
+  '^[[5;5~'  : [ CTRL, PAGEUP ],
+  '^[[6;5~'  : [ CTRL, PAGEDOWN ],
+  '^[[1;5H'  : [ CTRL, HOME3 ],
+  '^[[1;5F'  : [ CTRL, END3 ], // pdn
+  '^[[1;5A'  : [ CTRL, UP ],
+  '^[[1;5B'  : [ CTRL, DOWN ],
+  '^[[1;5C'  : [ CTRL, RIGHT ],
+  '^[[1;5D'  : [ CTRL, LEFT ],
+
+  // ---- alt
+
+  '^[^[' : [ ALT, ESCAPE ],  // esc
+  // f1 system menu
+  // f2 app menu
+  // f3 shows app finder
+  // f4 close window
+  // f5 maximize horiz
+  // f6 maximize vert
+  '^[[18;3~' : [ ALT, F7 ],
+  '^[[19;3~' : [ ALT, F8 ],
+  '^[[20;3~' : [ ALT, F9 ],
+  '^[[21;3~' : [ ALT, F10 ],
+  // f11 fullscreen
+  // f12 nothing
+  // ins nothing
+  // del nothing
+  '^[[5;3~'  : [ ALT, PAGEUP ],
+  '^[[6;3~'  : [ ALT, PAGEDOWN ],
+  '^[[1;3H'  : [ ALT, HOME3 ],
+  '^[[1;3F'  : [ ALT, END3 ], // end
+  '^[[1;3A'  : [ ALT, UP ], // up
+  '^[[1;3B'  : [ ALT, DOWN ], // down
+  '^[[1;3C'  : [ ALT, RIGHT ], // right
+  '^[[1;3D'  : [ ALT, LEFT ], // left
+
+  // ---- ctrl + shift
+
+  '^[O1;6P'   : [ CTRL_SHIFT, F1 ],
+  '^[O1;6Q'   : [ CTRL_SHIFT, F2 ],
+  '^[O1;6R'   : [ CTRL_SHIFT, F3 ],
+  '^[O1;6S'   : [ CTRL_SHIFT, F4 ],
+  '^[[15;6~'  : [ CTRL_SHIFT, F5 ],
+  '^[[17;6~'  : [ CTRL_SHIFT, F6 ],
+  '^[[18;6~'  : [ CTRL_SHIFT, F7 ],
+  '^[[19;6~'  : [ CTRL_SHIFT, F8 ],
+  '^[[20;6~'  : [ CTRL_SHIFT, F9 ],
+  '^[[21;6~'  : [ CTRL_SHIFT, F10 ],
+  '^[[23;6~'  : [ CTRL_SHIFT, F11 ],
+  '^[[24;6~'  : [ CTRL_SHIFT, F12 ],
+
+  // ins weirdness
+  '^[[3;6~'  : [ CTRL_SHIFT, DELETE ], // del
+  // pageup scrolls
+  // pagedn scrolls
+  // home scrolls
+  // end scrolls
+  // up scrolls
+  // down scrolls
+  '^[[1;6C'  : [ CTRL_SHIFT, RIGHT ], // right
+  '^[[1;6D'  : [ CTRL_SHIFT, LEFT ], // left
+
+  // ---- ctrl + alt
+
+  // f1-f12 changes tty
+
+  '^[[2;7~'  : [ CTRL_ALT, INSERT ],  // ins
+  // '^[[3;7~'  : [ CTRL_ALT, DELETE ],
+  '^[[5;7~'  : [ CTRL_ALT, PAGEUP ],
+  '^[[6;7~'  : [ CTRL_ALT, PAGEDOWN ],
+  // home nothing
+  // end nothing
+  // arrows nothing
+  // arrows nothing
+  // arrows nothing
+  // arrows nothing
+
+  // ---- ctrl + shift + alt
+
+  // f1-f12 changes tty
+
+  // ins pastes
+  '^[[3;8~'  : [ CTRL_ALT_SHIFT, DELETE ], // del
+  // pageup scrolls
+  // pagedn scrolls
+  // home/end scrolls
+  // home/end scrolls
+  '^[[1;8A'  : [ CTRL_ALT_SHIFT, UP ], // up
+  '^[[1;8B'  : [ CTRL_ALT_SHIFT, DOWN ], // down
+  '^[[1;8C'  : [ CTRL_ALT_SHIFT, RIGHT ], // right
+  '^[[1;8D'  : [ CTRL_ALT_SHIFT, LEFT ] // left
 }
 
 var good = 0;
@@ -1044,7 +1209,7 @@ function ok(res, key) {
 function test(keys, term) {
   for (var seq in keys) {
     res = parse(seq, term);
-  
+
     if (ok(res, keys[seq])) {
       good++;
       // console.log(paint(' -- OK:', 'green'), seq);
@@ -1064,6 +1229,8 @@ console.log(' ===== xterm');
 test(xterm_keys, 'xterm');
 console.log(' ===== mrxvt');
 test(mrxvt_keys, 'mrxvt');
+console.log(' ===== xfce4');
+test(xfce4_keys, 'xfce4');
 
 // test buffer cut
 ['^[[1;8B', '^[[1;', '8B^[[', '1;8B'].forEach(function(key) {

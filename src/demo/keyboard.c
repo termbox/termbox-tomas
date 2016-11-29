@@ -708,7 +708,11 @@ int main(int argc, char **argv)
 				tb_shutdown();
 				return 0;
 			}
-			if (ev.key == TB_KEY_CTRL_C && ctrlxpressed) {
+			if (ev.key == TB_KEY_CTRL_C) {
+				tb_shutdown();
+				return 0;
+
+			// if (ev.key == TB_KEY_CTRL_C && ctrlxpressed) {
 				static int chmap[] = {
 					TB_INPUT_ESC | TB_INPUT_MOUSE, /* 101 */
 					TB_INPUT_ALT | TB_INPUT_MOUSE, /* 110 */

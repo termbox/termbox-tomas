@@ -102,14 +102,15 @@ int tb_init_fd(int inout_)
 	struct termios tios;
 	memcpy(&tios, &orig_tios, sizeof(tios));
 
+/*
   tios.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
   tios.c_oflag &= ~(OPOST);
   tios.c_cflag |= (CS8);
   tios.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-  tios.c_cc[VMIN] = 0; /* Return each byte, or zero for timeout. */
-  tios.c_cc[VTIME] = 1; /* 100 ms timeout (unit is tens of second). */
+  tios.c_cc[VMIN] = 0;  // Return each byte, or zero for timeout.
+  tios.c_cc[VTIME] = 1; // 100 ms timeout (unit is tens of second).
+*/
 
-/*
 	tios.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
                            | INLCR | IGNCR | ICRNL | IXON);
 	tios.c_oflag &= ~OPOST;
@@ -118,7 +119,7 @@ int tb_init_fd(int inout_)
 	tios.c_cflag |= CS8;
 	tios.c_cc[VMIN] = 0;
 	tios.c_cc[VTIME] = 0;
-*/
+
 	tcsetattr(inout, TCSAFLUSH, &tios);
 
 	bytebuffer_init(&input_buffer, 128);
@@ -601,6 +602,48 @@ static void update_size(void)
 	send_clear();
 }
 
+static bool parse_esc_seq(struct tb_event *event, const char *seq, int len) {
+
+	// printf("%d %d %d \n", seq[0], seq[1], seq[2]);
+	// event->ch = 0;
+
+  event->meta = len;
+  event->type = TB_EVENT_KEY;
+  event->key  = TB_KEY_ARROW_DOWN;
+  return true;
+
+	switch(seq[1]) {
+		case ']':
+			printf("double trouble\n");
+			break;
+
+		case 'O':
+      if (seq[2] > 96 && seq[2] < 101) { // ctrl + arrows mrxvt/urxvt
+      	printf("arrows: %d\n", seq[2]);
+      	// event->meta = TB_META_CTRL;
+      	// event->key  = seq[2] + 968;
+      } else { // xfce4 ctrl+shift f1-f4, or f1-f4 xterm/mrxvt
+        if (seq[2] == 49) { // xfce4
+        	printf("f1-f4\n");
+          // event->key  = seq[len-1] - 69;
+          event->meta = TB_META_CTRLSHIFT;
+        } else {
+        	printf("key\n");
+          // event->key  = seq[2] - 69;
+          event->meta = 0;
+        }
+      }
+
+      return true;
+			break;
+
+		default:
+			break;
+	}
+
+  return true;
+}
+
 int cutesc = 0;
 
 static int read_and_extract_event(struct tb_event * event, int inputmode) {
@@ -622,13 +665,13 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
 	tb_clear();
 
   if (c == 27) {
-    
+
     nread = 1;
     while (nread < max) {
       rs = read(fd, seq + nread++, 1);
       if (rs == -1) exit(1);
       if (rs == 0) break;
-      
+
       if (seq[nread-1] == 27) {
         cutesc = 1;
         break;
@@ -649,15 +692,14 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
   	  ch = i > nread ? ' ' : seq[i] > 0 ? seq[i] : '-';
       tb_change_cell(4+i, 1, ch, TB_WHITE, TB_DEFAULT);
   	}
-  	
+
   	int mouse_parsed = parse_mouse_event(event, seq, nread);
   	if (mouse_parsed != 0)
   	  return mouse_parsed;
 
-    event->meta = nread;
-    event->type = TB_EVENT_KEY;
-    event->key  = TB_KEY_ARROW_DOWN;
-    return true;
+  	return parse_esc_seq(event, seq, nread);
+  	// return true;
+
   } else {
     event->type = TB_EVENT_KEY;
     event->key  = c;
@@ -705,7 +747,7 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
 #define ENOUGH_DATA_FOR_PARSING 64
 	fd_set events;
 	memset(event, 0, sizeof(struct tb_event));
-	
+
 	while(1) {
 	if (read_and_extract_event(event, inputmode))
 	  return event->type;

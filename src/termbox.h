@@ -36,16 +36,21 @@ extern "C" {
 #define TB_KEY_END              (0xFFFF-15)
 #define TB_KEY_PGUP             (0xFFFF-16)
 #define TB_KEY_PGDN             (0xFFFF-17)
-#define TB_KEY_ARROW_UP         (0xFFFF-18)
-#define TB_KEY_ARROW_DOWN       (0xFFFF-19)
-#define TB_KEY_ARROW_LEFT       (0xFFFF-20)
-#define TB_KEY_ARROW_RIGHT      (0xFFFF-21)
+// #define TB_KEY_ARROW_UP         (0xFFFF-18)
+// #define TB_KEY_ARROW_DOWN       (0xFFFF-19)
+// #define TB_KEY_ARROW_LEFT       (0xFFFF-20)
+// #define TB_KEY_ARROW_RIGHT      (0xFFFF-21)
 #define TB_KEY_MOUSE_LEFT       (0xFFFF-22)
 #define TB_KEY_MOUSE_RIGHT      (0xFFFF-23)
 #define TB_KEY_MOUSE_MIDDLE     (0xFFFF-24)
 #define TB_KEY_MOUSE_RELEASE    (0xFFFF-25)
 #define TB_KEY_MOUSE_WHEEL_UP   (0xFFFF-26)
 #define TB_KEY_MOUSE_WHEEL_DOWN (0xFFFF-27)
+
+#define TB_KEY_ARROW_UP         1065
+#define TB_KEY_ARROW_DOWN       1066
+#define TB_KEY_ARROW_RIGHT      1067
+#define TB_KEY_ARROW_LEFT       1068
 
 /* These are all ASCII code points below SPACE character and a BACKSPACE key. */
 #define TB_KEY_CTRL_TILDE       0x00
