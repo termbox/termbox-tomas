@@ -602,42 +602,200 @@ static void update_size(void)
 	send_clear();
 }
 
+static int parse_corchetes(struct tb_event *event, const char *seq, int len) {
+  int last = seq[len-1];
+  int res  = 0;
+
+  if (len == 3) {
+
+    if (last == 'Z') { // shift + tab
+      event->meta = TB_META_SHIFT;
+      event->key  = TB_KEY_TAB;
+
+    } else if ('A' <= last && last <= 'H') { // arrow keys linux and xterm
+      event->key = 0xFFFF - (last - 86);
+
+    } else if ('a' <= last && last <= 'd') { // mrxvt shift + left/right or ctrl+shift + up/down
+      // TODO: handle ctrl + shift + arrow in mrxvt
+      event->meta = TB_META_SHIFT;
+      event->key  = 0xFFFF - (last - 118);
+    }
+
+  } else if (len == 4 && ('A' <= last && last <= 'Z')) { // F1-F5 xterm
+
+      event->key = last - 54;
+
+  } else if (len > 5) { // xterm shift or control + f1/keys/arrows
+
+    if (last == '~') {
+      // handle shift + delete case
+      event->key = (seq[4] == ';') ? (int)seq[3] : ((int)seq[2] * 10 + (int)seq[3]);
+
+      // num may be two digit number, so meta key can be at index 4 or 5
+      event->meta = '2' <= seq[5] && seq[5] <= '8' ? (int)seq[4]
+                  : '2' <= seq[6] && seq[6] <= '8' ? (int)seq[5] : -1;
+
+    } else if ('A' <= last && last <= 'Z') {
+      event->meta = seq[4] - 48;
+
+      if (last >= 80) { // f1-f4 xterm
+        // event->key = last - 69; // TODO
+        event->key = 0xFFFF - (last - 86);
+      } else {  // ctrl + arrows urxvt
+        event->key = 0xFFFF + (last - 86);
+      }
+
+    } else {
+      res = -1;
+    }
+
+  } else if (last == '^' || last == '@' || last == '$') { // 4 or 5 in length
+
+    int num = len == 5 ? ((int)seq[3] * 10 + (int)seq[4]) : (int)seq[3];
+
+    if (num >= 25) { // ctrl + shift f1-f12 urxvt
+      int offset = num == 25 || num == 26 || num == 29 ? 12 : 13;
+      event->key = num - offset; // TODO
+      event->meta = TB_META_CTRLSHIFT;
+    } else {
+      event->meta = last == '@' ? 6 : last >> 4;
+      event->key  = num;
+    }
+
+  } else if (last == '~') { // 4 or 5 in length
+
+    if (len == 5 && ((int)seq[3] * 10 + (int)seq[4]) > 24) { // shift + f1-f8, linux/urxvt
+
+      int num = ((int)seq[3] * 10 + (int)seq[4]);
+      int offset = 13;
+
+/*
+      if (term == 'linux') {
+        offset = 15;
+
+        if (num == 25 || num == 26) // offset disparity
+          offset -= 1;
+        else if (num == 31) // F5
+          offset += 1;
+      } else {
+        offset = 13;
+
+        if (num == 25 || num == 26 || num == 29) // offset disparity
+          offset -= 1;
+      }
+*/
+
+      event->meta = TB_META_SHIFT;
+      event->key  = num - offset;
+
+    } else if (seq[3] == 3) { // mrxvt shift + insert
+      event->meta = TB_META_SHIFT;
+      event->key  = TB_KEY_INSERT;
+
+    } else {
+      event->key = len == 5 ? ((int)seq[3] * 10 + (int)seq[4]) : (int)seq[3];
+    }
+
+  } else {
+    res = -1;
+  }
+  
+  return res;
+}
+
 static bool parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 
-	// printf("%d %d %d \n", seq[0], seq[1], seq[2]);
-	// event->ch = 0;
+/*
+  int i;
+	printf("\nkey: [%d] --> ", len); // key);
+	for (i = 0; i < len; i++)
+		printf("%d ", seq[i]);
+*/
 
-  event->meta = len;
+  // event->meta = len;
   event->type = TB_EVENT_KEY;
-  event->key  = TB_KEY_ARROW_DOWN;
-  return true;
+  // event->key  = TB_KEY_ARROW_DOWN;
+
+	if (len == 1) {
+    return false; // no point in continuing
+  } else if (len == 2) { // alt+char or alt+shift+char
+    event->meta = seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
+    event->ch   = seq[1];
+    return true;
+  }
 
 	switch(seq[1]) {
-		case ']':
-			printf("double trouble\n");
+		case '[':
+		  if (parse_corchetes(event, seq, len) == 0)
+		    return true;
 			break;
 
 		case 'O':
       if (seq[2] > 96 && seq[2] < 101) { // ctrl + arrows mrxvt/urxvt
-      	printf("arrows: %d\n", seq[2]);
-      	// event->meta = TB_META_CTRL;
-      	// event->key  = seq[2] + 968;
-      } else { // xfce4 ctrl+shift f1-f4, or f1-f4 xterm/mrxvt
-        if (seq[2] == 49) { // xfce4
-        	printf("f1-f4\n");
-          // event->key  = seq[len-1] - 69;
-          event->meta = TB_META_CTRLSHIFT;
-        } else {
-        	printf("key\n");
-          // event->key  = seq[2] - 69;
-          event->meta = 0;
-        }
-      }
+        event->meta = TB_META_CTRL;
+        event->key  = 0xFFFF - (seq[2] - 118);
+
+      } else if (seq[2] == 49) { // xfce4 arrow keys
+        event->key  = 0xFFFF + (seq[len-1] - 80);
+        event->meta = TB_META_CTRLSHIFT;
+
+      } else if (65 <= seq[2] && seq[2] <= 68) { // arrows xterm/mrxvt
+        event->key  = 0xFFFF + (seq[2] - 86);
+        event->meta = 0;
+
+      } else { /* unknown */ }
 
       return true;
 			break;
 
+    case '^':
+      printf("here: %d %d\n", seq[2], seq[3]);
+      if (seq[3] == '[') {
+        // TODO
+        // if (!seq[4]) return [ ALT, ESCAPE ];
+
+        // urxvt territory
+        int last = seq[len-1];
+        
+        switch(last) {
+          case 'R': // mrxvt alt + f3
+            event->meta = TB_META_ALT;
+            event->key  = 0xFFFF - 2;
+            break;
+
+          case '~': // urxvt alt + key
+            event->key = len == 7 ? (int)seq[5] * 10 + (int)seq[6] : (int)seq[5];
+            event->meta = TB_META_ALT;
+            break;
+
+          case '^':
+          case '@': // ctrl + alt + arrows
+            event->meta = last == '^' ? TB_META_ALTCTRL : TB_META_ALTCTRLSHIFT;
+            event->key  = seq[5];
+            break;
+
+          default:
+            if ('a' <= last && last <= 'z') { // urxvt ctr/alt arrow or ctr/shift/alt arrow
+              event->meta = seq[4] == 'O' ? TB_META_ALTCTRL : TB_META_ALTCTRLSHIFT;
+              event->key  = 0xFFFF - (last - 118);
+
+            } else if ('A' <= last && last <= 'Z') { // urxvt alt + arrow keys
+              event->meta = TB_META_ALT;
+              event->key  = 0xFFFF - (last - 80);
+            }
+    
+            break;
+        }
+
+      } else if ('A' <= seq[3] && seq[3] <= 'Z') { // linux ctrl+alt+key
+        event->meta = TB_META_ALTCTRL;
+        event->ch = seq[3];
+      }
+      
+      break;
+
 		default:
+		  printf("Unknown: %d\n", seq[1]);
 			break;
 	}
 
@@ -693,11 +851,11 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
       tb_change_cell(4+i, 1, ch, TB_WHITE, TB_DEFAULT);
   	}
 
-  	int mouse_parsed = parse_mouse_event(event, seq, nread);
+  	int mouse_parsed = parse_mouse_event(event, seq, nread-1);
   	if (mouse_parsed != 0)
   	  return mouse_parsed;
 
-  	return parse_esc_seq(event, seq, nread);
+  	return parse_esc_seq(event, seq, nread-1);
   	// return true;
 
   } else {
@@ -749,7 +907,7 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
 	memset(event, 0, sizeof(struct tb_event));
 
 	while(1) {
-	if (read_and_extract_event(event, inputmode))
-	  return event->type;
+	  if (read_and_extract_event(event, inputmode))
+	    return event->type;
 	}
 }

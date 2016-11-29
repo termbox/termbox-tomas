@@ -448,6 +448,15 @@ function parse(seq, term) {
     return [ CTRL, seq[1] ];
   }
 
+  if (seq.length == 3) {
+    var letter = seq[2];
+    if (letter >= 'A' && letter <= 'Z') {
+      return [ ALT_SHIFT, letter];
+    } else {
+      return [ ALT, letter];
+    }
+  }
+
   switch(seq[2]) {
 
     case '[':
@@ -473,7 +482,7 @@ function parse(seq, term) {
     case '^':
       if (seq[3] == '[') {
         if (!seq[4]) return [ ALT, ESCAPE ];
-
+        
         // urxvt territory
         var last = seq.pop();
 
@@ -499,7 +508,7 @@ function parse(seq, term) {
           console.log('nope', seq)
         }
 
-      } else if (seq[2] == '^') { // linux ctrl+alt+key
+      } else if ('A' <= seq[3] && seq[3] <= 'Z') { // linux ctrl+alt+key
         return [ CTRL_ALT, seq[3]]
 
       } else {
@@ -507,12 +516,6 @@ function parse(seq, term) {
       }
       break;
     default:
-      var letter = seq[2];
-      if (letter >= 'A' && letter <= 'Z') {
-        return [ ALT_SHIFT, letter];
-      } else {
-        return [ ALT, letter];
-      }
       break;
   }
 
