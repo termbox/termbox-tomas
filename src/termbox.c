@@ -703,7 +703,7 @@ static int parse_corchetes(struct tb_event *event, const char *seq, int len) {
   return res;
 }
 
-static bool parse_esc_seq(struct tb_event *event, const char *seq, int len) {
+static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 
 /*
   int i;
@@ -717,17 +717,18 @@ static bool parse_esc_seq(struct tb_event *event, const char *seq, int len) {
   // event->key  = TB_KEY_ARROW_DOWN;
 
 	if (len == 1) {
-    return false; // no point in continuing
+	  event->key  = TB_KEY_ESC;
+    return 1;
   } else if (len == 2) { // alt+char or alt+shift+char
     event->meta = seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
     event->ch   = seq[1];
-    return true;
+    return 1;
   }
 
 	switch(seq[1]) {
 		case '[':
 		  if (parse_corchetes(event, seq, len) == 0)
-		    return true;
+		    return 1;
 			break;
 
 		case 'O':
@@ -745,7 +746,7 @@ static bool parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 
       } else { /* unknown */ }
 
-      return true;
+      return 1;
 			break;
 
     case '^':
@@ -782,6 +783,8 @@ static bool parse_esc_seq(struct tb_event *event, const char *seq, int len) {
             } else if ('A' <= last && last <= 'Z') { // urxvt alt + arrow keys
               event->meta = TB_META_ALT;
               event->key  = 0xFFFF - (last - 80);
+            } else {
+              return -1;
             }
     
             break;
@@ -799,35 +802,40 @@ static bool parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 			break;
 	}
 
-  return true;
+  return 1;
 }
 
+int maxesc = 8;
 int cutesc = 0;
+static char seq[8];
 
 static int read_and_extract_event(struct tb_event * event, int inputmode) {
-  int fd = STDIN_FILENO;
-  int max = 10;
-
   int nread, rs;
-  char c, seq[max];
+  char c;
 
   if (cutesc) {
     c = 27;
     cutesc = 0;
   } else {
-    while ((nread = read(fd, &c, 1)) == 0);
-    if (nread == -1) exit(1);
+    while ((nread = read(inout, &c, 1)) == 0);
+    if (nread == -1) return -1;
   }
 
   seq[0] = c;
 	tb_clear();
 
-  if (c == 27) {
+  if (c != 27) { // regular key
+
+    event->type = TB_EVENT_KEY;
+    event->key  = c;
+    return 1;
+
+  } else {
 
     nread = 1;
-    while (nread < max) {
-      rs = read(fd, seq + nread++, 1);
-      if (rs == -1) exit(1);
+    while (nread < maxesc) {
+      rs = read(inout, seq + nread++, 1);
+      if (rs == -1) return -1;
       if (rs == 0) break;
 
       if (seq[nread-1] == 27) {
@@ -836,17 +844,18 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
       }
     }
 
-    if (nread == max) {
-      printf("reached the end\n");
-    	return false;
+    if (nread == maxesc) {
+    	return 0;
     }
+    
+    seq[nread] = '\0';
 
     int i, ch;
   	// printf("\nseq [%d] --> ", nread); // key);
     tb_change_cell(2, 1, nread + 48, TB_WHITE, TB_DEFAULT);
     tb_change_cell(3, 1, ':', TB_WHITE, TB_DEFAULT);
 
-  	for (i = 1; i < max; i++) {
+  	for (i = 1; i < maxesc; i++) {
   	  ch = i > nread ? ' ' : seq[i] > 0 ? seq[i] : '-';
       tb_change_cell(4+i, 1, ch, TB_WHITE, TB_DEFAULT);
   	}
@@ -857,11 +866,6 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
 
   	return parse_esc_seq(event, seq, nread-1);
   	// return true;
-
-  } else {
-    event->type = TB_EVENT_KEY;
-    event->key  = c;
-    return true;
   }
 }
 
@@ -902,12 +906,36 @@ static int read_up_to(int n) {
 static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
 {
 	// ;-)
-#define ENOUGH_DATA_FOR_PARSING 64
+  // #define ENOUGH_DATA_FOR_PARSING 64
+  int n;
 	fd_set events;
 	memset(event, 0, sizeof(struct tb_event));
 
-	while(1) {
-	  if (read_and_extract_event(event, inputmode))
-	    return event->type;
-	}
+  // n = read_and_extract_event(event, inputmode);
+  // if (n < 0) return -1;
+  // if (n > 0) return event->type;
+  
+  while (1) {
+    FD_ZERO(&events);
+    FD_SET(inout, &events);
+    FD_SET(winch_fds[0], &events);
+    int maxfd  = (winch_fds[0] > inout) ? winch_fds[0] : inout;
+    int result = select(maxfd+1, &events, 0, 0, timeout);
+    if (!result) return 0;
+  
+    if (FD_ISSET(winch_fds[0], &events)) {
+      event->type = TB_EVENT_RESIZE;
+      int zzz = 0;
+      read(winch_fds[0], &zzz, sizeof(int));
+      buffer_size_change_request = 1;
+      get_term_size(&event->w, &event->h);
+      return TB_EVENT_RESIZE;
+    }
+  
+    if (FD_ISSET(inout, &events)) {
+      n = read_and_extract_event(event, inputmode) > 0;
+      if (n < 0) return -1;
+      if (n > 0) return event->type;
+    }
+  }
 }
