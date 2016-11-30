@@ -631,7 +631,7 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
     } else if ('a' <= last && last <= 'd') { // mrxvt shift + left/right or ctrl+shift + up/down
       // TODO: handle ctrl + shift + arrow in mrxvt
       event->meta = TB_META_SHIFT;
-      event->key  = 0xFFFF - (last - 118);
+      event->key  = 0xFFFF + (last - 118);
     } else {
     	res = -1;
     }
@@ -758,7 +758,7 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 		case 'O':
       if (seq[2] > 96 && seq[2] < 101) { // ctrl + arrows mrxvt/urxvt
         event->meta = TB_META_CTRL;
-        event->key  = 0xFFFF - (seq[2] - 118);
+        event->key  = 0xFFFF + (seq[2] - 118);
 
       } else if (seq[2] == 49) { // xfce4 arrow keys
         event->key  = 0xFFFF + (seq[len-1] - 80);
@@ -849,6 +849,7 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
 
 	if (c != 27 && 1 <= c && c <= 122) { // from ctrl-a to z, not esc
 
+		printf("key: %d\n", c);
     event->key  = c;
     return 1;
 
@@ -860,6 +861,7 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
       if (rs == -1) return -1;
       if (rs == 0) break;
 
+      // handle urxvt alt + keys
       if (seq[nread-1] == 27) { // found another escape char!
       	if (seq[nread-2] == 27) { // double esc, meaning alt+esc
       		event->key  = TB_KEY_ESC;
