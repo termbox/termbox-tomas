@@ -758,14 +758,6 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
 
 static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 
-/*
-  int i;
-	printf("\nkey: [%d] --> ", len); // key);
-	for (i = 0; i < len; i++)
-		printf("%d ", seq[i]);
-*/
-
-
 	if (len == 1) {
 	  event->key  = TB_KEY_ESC;
     return 1;
@@ -955,7 +947,7 @@ static int read_and_extract_event(struct tb_event * event) {
     if (nread == maxseq) return 0;
     seq[nread] = '\0';
 
-    if (c == 27) {
+    if (c == 27 || c == 32539) { // TODO: figure this one out.
 
 /*
 	    int i, ch;
@@ -1056,5 +1048,6 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout) {
       if (n < 0) return -1;
       if (n > 0) return event->type;
     }
+
   }
 }
