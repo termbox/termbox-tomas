@@ -674,7 +674,7 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
       event->meta = TB_META_CTRLSHIFT;
     } else {
       event->meta = last == '@' ? 6 : last >> 4;
-      event->key  = num;
+      event->key  = num; // ALSO TODO
     }
 
   } else if (last == '~') { // 4 or 5 in length
@@ -700,7 +700,7 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
       }
 */
       event->meta = TB_META_SHIFT;
-      event->key  = num - offset;
+      event->key  = num - offset; // TODO
 
     } else if (seq[3] == 3) { // mrxvt shift + insert
       event->meta = TB_META_SHIFT;
@@ -729,14 +729,19 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 		printf("%d ", seq[i]);
 */
 
-  event->type = TB_EVENT_KEY;
-
 	if (len == 1) {
 	  event->key  = TB_KEY_ESC;
     return 1;
+
   } else if (len == 2) { // alt+char or alt+shift+char or alt + enter
     event->meta = seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
-    event->ch   = seq[1] == 10 ? TB_KEY_ENTER : seq[1];
+
+    if (seq[1] == 10) {
+      event->key = TB_KEY_ENTER;
+    } else {
+      event->ch = seq[1];
+    }
+
     return 1;
   }
 
@@ -845,12 +850,29 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
 
   seq[0] = c;
 	event->type = TB_EVENT_KEY;
+  event->meta = 0;
+	// event->key  = 0;
+	event->ch   = 0;
 	tb_clear();
 
-	if (c != 27 && 1 <= c && c <= 122) { // from ctrl-a to z, not esc
+	if (c != 27 && 0 <= c && c <= 127) { // from ctrl-a to z, not esc
 
-    event->meta = c < 27 ? TB_META_CTRL : c >= 'A' && c <= 'Z' ? TB_META_SHIFT : 0;
-    event->key  = c;
+    if (c == 127) {
+      event->key = TB_KEY_BACKSPACE2;
+
+    } else if (c < 32) { // ctrl + a-z or number up to 7
+      event->meta = TB_META_CTRL; // TODO: figure out whether leave enter (13) out of this or not.
+      event->key = c;
+      // event->ch  = c + 97; // we don't want it to be printed
+
+    } else if ('A' <= c && c <= 'Z') {
+      event->meta = TB_META_SHIFT;
+      event->ch = c;
+
+    } else { // 1, 9, 0
+      event->ch = c;
+    }
+
     return 1;
 
   } else { // either esc or unicode
@@ -901,7 +923,7 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
 			/* everything ok, fill event, pop buffer, return success */
 			tb_utf8_char_to_unicode(&event->ch, seq);
 			event->key = 0;
-			// bytebuffer_truncate(inbuf, tb_utf8_char_length(buf[0]));
+			// bytebuffer_truncate(inbuf, tb_utf8_char_length(seq[0]));
 			return 1;
 		} else {
 			// unknown sequence
