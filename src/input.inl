@@ -40,8 +40,8 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
 			return -6;
 		}
 		event->type = TB_EVENT_MOUSE; // TB_EVENT_KEY by default
-		if ((b & 32) != 0)
-			event->mod |= TB_MOD_MOTION;
+		// if ((b & 32) != 0)
+			// event->mod |= TB_MOD_MOTION;
 
     // if (event->key != TB_KEY_MOUSE_RELEASE)
       event->meta = (b >> 2) - 7;
@@ -128,8 +128,8 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
 		}
 
 		event->type = TB_EVENT_MOUSE; // TB_EVENT_KEY by default
-		if ((n1&32) != 0)
-			event->mod |= TB_MOD_MOTION;
+		// if ((n1&32) != 0)
+			// event->mod |= TB_MOD_MOTION;
 
     // if (event->key != TB_KEY_MOUSE_RELEASE)
       event->meta = (n1 >> 2) - 7;
@@ -142,6 +142,8 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
 
 	return 0;
 }
+
+/*
 
 // #define DEBUGGING 1
 // function ported from tcolar's termbox-go fork:
@@ -385,7 +387,9 @@ static int parse_escape_seq(struct tb_event *event, const char *buf, int len)
 	}
 	return 0;
 }
+*/
 
+/*
 static bool extractx_event(struct tb_event *event, struct bytebuffer *inbuf, int inputmode)
 {
 	const char *buf = inbuf->buf;
@@ -433,7 +437,7 @@ static bool extractx_event(struct tb_event *event, struct bytebuffer *inbuf, int
 	if ((unsigned char)buf[0] <= TB_KEY_SPACE ||
 			(unsigned char)buf[0] == TB_KEY_BACKSPACE2)
 	{
-		// fill event, pop buffer, return success */
+		// fill event, pop buffer, return success
 		event->ch = 0;
 		event->key = (uint16_t)buf[0];
 		bytebuffer_truncate(inbuf, 1);
@@ -444,7 +448,7 @@ static bool extractx_event(struct tb_event *event, struct bytebuffer *inbuf, int
 
 	// check if there is all bytes
 	if (len >= tb_utf8_char_length(buf[0])) {
-		/* everything ok, fill event, pop buffer, return success */
+		// everything ok, fill event, pop buffer, return success
 		tb_utf8_char_to_unicode(&event->ch, buf);
 		event->key = 0;
 		bytebuffer_truncate(inbuf, tb_utf8_char_length(buf[0]));
@@ -455,3 +459,4 @@ static bool extractx_event(struct tb_event *event, struct bytebuffer *inbuf, int
 	// sequence
 	return false;
 }
+*/

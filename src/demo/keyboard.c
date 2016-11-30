@@ -614,7 +614,7 @@ void pretty_print_press(struct tb_event *ev)
 	printf_tb(60, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->ch);
 	printf_tb(60, 22, TB_RED   , TB_DEFAULT, "string:  %s", buf);
 
-	printf_tb(54, 18, TB_WHITE, TB_DEFAULT, "Meta/mod: %d/%s", ev->meta, (ev->mod) ? "TB_MOD_ALT" : "none");
+	printf_tb(54, 18, TB_WHITE, TB_DEFAULT, "Meta: %d", ev->meta);
 
 }
 
@@ -657,7 +657,7 @@ void  pretty_print_mouse(struct tb_event *ev) {
 
 void dispatch_press(struct tb_event *ev)
 {
-	if (ev->mod & TB_MOD_ALT) {
+	if (ev->meta == TB_META_ALT || ev->meta == TB_META_ALTSHIFT || ev->meta == TB_META_ALTCTRL) {
 		draw_key(K_LALT, TB_WHITE, TB_RED);
 		draw_key(K_RALT, TB_WHITE, TB_RED);
 	}

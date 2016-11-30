@@ -49,10 +49,12 @@ static void bytebuffer_puts(struct bytebuffer *b, const char *str) {
 	bytebuffer_append(b, str, strlen(str));
 }
 
+/*
 static void bytebuffer_resize(struct bytebuffer *b, int len) {
 	bytebuffer_reserve(b, len);
 	b->len = len;
 }
+*/
 
 static void bytebuffer_flush(struct bytebuffer *b, int fd) {
   int unused __attribute__((unused));
@@ -60,6 +62,7 @@ static void bytebuffer_flush(struct bytebuffer *b, int fd) {
 	bytebuffer_clear(b);
 }
 
+/*
 static void bytebuffer_truncate(struct bytebuffer *b, int n) {
 	if (n <= 0)
 		return;
@@ -69,3 +72,4 @@ static void bytebuffer_truncate(struct bytebuffer *b, int n) {
 	memmove(b->buf, b->buf+n, nmove);
 	b->len -= n;
 }
+*/

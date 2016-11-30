@@ -171,7 +171,7 @@ struct tb_cell {
  */
 struct tb_event {
 	uint8_t type;
-	uint8_t mod; /* modifiers to either 'key' or 'ch' below */
+	// uint8_t mod; /* modifiers to either 'key' or 'ch' below */
 	uint16_t key; /* one of the TB_KEY_* constants */
 	uint32_t ch; /* unicode character */
 	uint8_t meta;

@@ -661,7 +661,6 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
 	      event->meta = '2' <= seq[5] && seq[5] <= '8' ? (int)seq[4]
 	                  : '2' <= seq[6] && seq[6] <= '8' ? (int)seq[5] : -1;
 */
-
     	}
 
     } else if ('A' <= last && last <= 'Z') {
@@ -687,7 +686,7 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
   		  // 53 pageup   // -16
   		  // 54 pagedown // -17
   			// 55 home     // -14
-  			// 56 end      //  -15
+  			// 56 end      // -15
 
   			int offset = seq[2] < 53 ? 38 : seq[2] > 54 ? 41 : 37;
 	      event->key = 0xFFFF - (seq[2] - offset);
@@ -889,9 +888,9 @@ int maxseq = 8;
 int cutesc = 0;
 static char seq[8];
 
-static int read_and_extract_event(struct tb_event * event, int inputmode) {
+static int read_and_extract_event(struct tb_event * event) {
   int nread, rs;
-  char c;
+  int c;
 
   if (cutesc) {
     c = 27;
@@ -1030,7 +1029,7 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout) {
 	memset(event, 0, sizeof(struct tb_event));
 
 	if (cutesc) { // there's a part of an escape sequence left!
-	  n = read_and_extract_event(event, inputmode);
+	  n = read_and_extract_event(event);
 	  if (n < 0) return -1;
 	  if (n > 0) return event->type;
 	}
@@ -1046,14 +1045,14 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout) {
     if (FD_ISSET(winch_fds[0], &events)) {
       event->type = TB_EVENT_RESIZE;
       int zzz = 0;
-      read(winch_fds[0], &zzz, sizeof(int));
+      n = read(winch_fds[0], &zzz, sizeof(int));
       buffer_size_change_request = 1;
       get_term_size(&event->w, &event->h);
       return TB_EVENT_RESIZE;
     }
 
     if (FD_ISSET(inout, &events)) {
-      n = read_and_extract_event(event, inputmode) > 0;
+      n = read_and_extract_event(event) > 0;
       if (n < 0) return -1;
       if (n > 0) return event->type;
     }
