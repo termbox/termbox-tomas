@@ -626,7 +626,7 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
 
 // not needed.
 //    } else if ('A' <= last && last <= 'H') { // arrow keys linux and xterm
-//      event->key = 0xFFFF - (last - 86);
+//      event->key = 0xFFFF + (last - 86);
 
     } else if ('a' <= last && last <= 'd') { // mrxvt shift + left/right or ctrl+shift + up/down
       // TODO: handle ctrl + shift + arrow in mrxvt
@@ -654,8 +654,8 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
       event->meta = seq[4] - 48;
 
       if (last >= 80) { // f1-f4 xterm
-        // event->key = last - 69; // TODO
-        event->key = 0xFFFF - (last - 86);
+        // event->key = last - 69; // TODO: verify
+        event->key = 0xFFFF + (last - 86);
       } else {  // ctrl + arrows urxvt
         event->key = 0xFFFF + (last - 86);
       }
@@ -731,6 +731,15 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 
   event->type = TB_EVENT_KEY;
 
+	if (len == 1) {
+	  event->key  = TB_KEY_ESC;
+    return 1;
+  } else if (len == 2) { // alt+char or alt+shift+char or alt + enter
+    event->meta = seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
+    event->ch   = seq[1] == 10 ? TB_KEY_ENTER : seq[1];
+    return 1;
+  }
+
 	int i;
 	for (i = 0; keys[i]; i++) {
 		if (starts_with(seq, len, keys[i])) {
@@ -738,15 +747,6 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 		  event->key = 0xFFFF-i;
 		  return 1; // strlen(keys[i]);
 		}
-  }
-
-	if (len == 1) {
-	  event->key  = TB_KEY_ESC;
-    return 1;
-  } else if (len == 2) { // alt+char or alt+shift+char or  alt + enter
-    event->meta = seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
-    event->ch   = seq[1] == 10 ? TB_KEY_ENTER : seq[1];
-    return 1;
   }
 
 	switch(seq[1]) {
@@ -775,9 +775,7 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 			break;
 
     case '^':
-      if (seq[3] == '[') {
-
-        // urxvt territory
+      if (seq[3] == '[') { // urxvt territory
         int last = seq[len-1];
 
         switch(last) {
@@ -800,11 +798,11 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
           default:
             if ('a' <= last && last <= 'z') { // urxvt ctr/alt arrow or ctr/shift/alt arrow
               event->meta = seq[4] == 'O' ? TB_META_ALTCTRL : TB_META_ALTCTRLSHIFT;
-              event->key  = 0xFFFF - (last - 118);
+              event->key  = 0xFFFF + (last - 118);
 
             } else if ('A' <= last && last <= 'Z') { // urxvt alt + arrow keys
               event->meta = TB_META_ALT;
-              event->key  = 0xFFFF - (last - 80);
+              event->key  = 0xFFFF + (last - 80);
             } else {
               return -1;
             }
@@ -849,7 +847,7 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
 
 	if (c != 27 && 1 <= c && c <= 122) { // from ctrl-a to z, not esc
 
-		printf("key: %d\n", c);
+    event->meta = c < 27 ? TB_META_CTRL : c >= 'A' && c <= 'Z' ? TB_META_SHIFT : 0;
     event->key  = c;
     return 1;
 
@@ -863,10 +861,12 @@ static int read_and_extract_event(struct tb_event * event, int inputmode) {
 
       // handle urxvt alt + keys
       if (seq[nread-1] == 27) { // found another escape char!
-      	if (seq[nread-2] == 27) { // double esc, meaning alt+esc
-      		event->key  = TB_KEY_ESC;
-      		event->meta = TB_META_ALT;
-      		return 1;
+      	if (seq[nread-2] == 27) { // double esc
+      	  if (read(inout, seq + nread++, 1) == 0) { // end of the road, so it's alt+esc
+        		event->key  = TB_KEY_ESC;
+        		event->meta = TB_META_ALT;
+        		return 1;
+      	  } // if not end of road, then it must be ^[^[[A (urxvt alt+arrows)
       	} else {
 	        cutesc = 1;
 	        break;
