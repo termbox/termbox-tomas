@@ -678,7 +678,7 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
     }
 
   } else if (last == '~') { // 4 or 5 in length
-
+  
     if (len == 5 && ((int)seq[3] * 10 + (int)seq[4]) > 24) { // shift + f1-f8, linux/urxvt
 
       int num = ((int)seq[3] * 10 + (int)seq[4]);
@@ -813,6 +813,8 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
       } else if ('A' <= seq[3] && seq[3] <= 'Z') { // linux ctrl+alt+key
         event->meta = TB_META_ALTCTRL;
         event->ch = seq[3];
+      } else {
+        return -1;
       }
 
       break;
