@@ -876,13 +876,28 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
   return 1;
 }
 
+static void decode_char(struct tb_event * event, uint32_t ch) {
+  if (ch == 127) {
+    event->key = TB_KEY_BACKSPACE2;
+
+  } else if (ch < 32) { // ctrl + a-z or number up to 7
+    event->meta = ch == 13 ? 0 : TB_META_CTRL;
+    event->key = ch;
+    // event->ch  = ch + 97; // we don't want it to be printed
+
+  } else { // a-z -- A-Z -- 0-9
+    event->meta = ('A' <= ch && ch <= 'Z') ? TB_META_SHIFT : 0;
+    event->ch = ch;
+  }
+}
+
 int maxseq = 8;
 int cutesc = 0;
 static char seq[8];
 
 static int read_and_extract_event(struct tb_event * event) {
   int nread, rs;
-  int c;
+  int c = 0;
 
   if (cutesc) {
     c = 27;
@@ -895,30 +910,10 @@ static int read_and_extract_event(struct tb_event * event) {
   seq[0] = c;
 	event->type = TB_EVENT_KEY;
   event->meta = 0;
-	// event->key  = 0;
 	event->ch   = 0;
-	// tb_clear();
 
 	if (c != 27 && 0 <= c && c <= 127) { // from ctrl-a to z, not esc
-
-    if (c == 127) {
-      event->key = TB_KEY_BACKSPACE2;
-
-    } else if (c < 32) { // ctrl + a-z or number up to 7
-
-    	// TODO: figure out whether leave enter (13) out of this or not.
-      event->meta = c == 13 ? 0 : TB_META_CTRL;
-      event->key = c;
-      // event->ch  = c + 97; // we don't want it to be printed
-
-    } else if ('A' <= c && c <= 'Z') {
-      event->meta = TB_META_SHIFT;
-      event->ch = c;
-
-    } else { // 1, 9, 0
-      event->ch = c;
-    }
-
+		decode_char(event, c);
     return 1;
 
   } else { // either esc or unicode
@@ -947,7 +942,7 @@ static int read_and_extract_event(struct tb_event * event) {
     if (nread == maxseq) return 0;
     seq[nread] = '\0';
 
-    if (c == 27 || c == 32539) { // TODO: figure this one out.
+    if (c == 27) {
 
 /*
 	    int i, ch;
@@ -968,9 +963,11 @@ static int read_and_extract_event(struct tb_event * event) {
 	  	return parse_esc_seq(event, seq, nread-1);
 
     } else if (nread-1 >= tb_utf8_char_length(seq[0])) {
-			/* everything ok, fill event, pop buffer, return success */
-			tb_utf8_char_to_unicode(&event->ch, seq);
-			event->key = 0;
+
+    	uint32_t ch;
+			tb_utf8_char_to_unicode(&ch, seq);
+    	decode_char(event, ch);
+
 			// bytebuffer_truncate(inbuf, tb_utf8_char_length(seq[0]));
 			return 1;
 		} else {
