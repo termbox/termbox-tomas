@@ -143,320 +143,280 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
 	return 0;
 }
 
+static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
+  int last = seq[len-1];
+  int res  = 0;
+
+  if (len == 3) {
+
+    if (last == 'Z') { // shift + tab
+      event->meta = TB_META_SHIFT;
+      event->key  = TB_KEY_TAB;
+
+// not needed.
+//    } else if ('A' <= last && last <= 'H') { // arrow keys linux and xterm
+//      event->key = 0xFFFF + (last - 86);
+
+    } else if ('a' <= last && last <= 'd') { // mrxvt shift + left/right or ctrl+shift + up/down
+      // TODO: handle ctrl + shift + arrow in mrxvt
+      event->meta = TB_META_SHIFT;
+      event->key  = 0xFFFF + (last - 118);
+    } else {
+    	res = -1;
+    }
+
+//  not needed.
+//  } else if (len == 4 && ('A' <= last && last <= 'Z')) { // F1-F5 xterm
+//      event->key = last - 54;
+
+  } else if (len > 5) { // xterm shift or control + f1/keys/arrows
+
+    if (last == '~') {
+
+    	if (seq[3] == ';') { // xfce shift/ctrl + keys (delete, pageup/down)
+
+  			int offset = seq[2] < 53 ? 38 : seq[2] > 54 ? 41 : 37;
+	      event->key = 0xFFFF - (seq[2] - offset);
+    		event->meta = seq[4] - 48;
+
+    	} else {
+
+    		return -1;
 /*
+				// TODO: check this
+	      event->key = (seq[4] == ';') ? (int)seq[3] : ((int)seq[2] * 10 + (int)seq[3]);
 
-// #define DEBUGGING 1
-// function ported from tcolar's termbox-go fork:
-// https://github.com/tcolar/termbox-go/commit/8e386c1b6b783dee1904d688347e2d282450b8e7
+	      // num may be two digit number, so meta key can be at index 4 or 5
+	      event->meta = '2' <= seq[5] && seq[5] <= '8' ? (int)seq[4]
+	                  : '2' <= seq[6] && seq[6] <= '8' ? (int)seq[5] : -1;
+*/
+    	}
 
-// example bufs:
+    } else if ('A' <= last && last <= 'Z') {
+      event->meta = seq[4] - 48;
 
-//       xterm:
-//        27, 91, 49, 59, 50, 65  --> shift + up arrow
-//        27, 91, 49, 59, 50, 66  --> shift + down arrow
-//       esc   [  1   ;   mod key
+      if (last >= 80) { // f1-f4 xterm
+        // event->key = last - 69; // TODO: verify
+        event->key = 0xFFFF + (last - 86);
+      } else {  // ctrl + arrows urxvt
+        event->key = 0xFFFF + (last - 86);
+      }
 
-//       urxvt:
-//        27  91  98 -13 -91, 126
-//        27  91  98 -95  40  127 <-- with URxvt.iso14755 = false
-//       esc mod key
+    } else {
+      res = -1;
+    }
 
-//       mrxvt:
-//        27, 91, 66, 59, 50, 66
-//        27, 91, 49, 59, 50, 66
+  } else if (last == '^' || last == '@' || last == '$') { // 4 or 5 in length
 
-static bool parse_meta_key(struct tb_event *event, const char *buf, const char *key) {
+  	if ('1' <= seq[2] && seq[2] <= '8') { // ctrl/shift + keys urxvt
 
-	unsigned int kl = strlen(key);
+  			// 50 ins      // -12
+  			// 51 del      // -13
+  		  // 53 pageup   // -16
+  		  // 54 pagedown // -17
+  			// 55 home     // -14
+  			// 56 end      // -15
 
-#ifdef DEBUGGING
-	int i;
-	printf("\nbuf: %s --> ", ""); // buf);
-	for (i = 0; i < strlen(buf); i++)
-		printf("%d ", buf[i]);
+  			int offset = seq[2] < 53 ? 38 : seq[2] > 54 ? 41 : 37;
+	      event->key = 0xFFFF - (seq[2] - offset);
+	      event->meta = last == '@' ? 6 : last >> 4;
 
-	printf("\nkey: %s --> ", ""); // key);
-	for (i = 0; i < strlen(key); i++)
-		printf("%d ", key[i]);
-#endif
+  	} else {
 
-	if (strlen(buf) < kl+2) {
-		return false;
-	}
+	    int num = len == 5 ? ((int)seq[3] * 10 + (int)seq[4]) : (int)seq[3];
 
-	if (buf[0] != key[0] || buf[1] != key[1]) {
-		return false;
-	}
+	    if (num >= 25) { // ctrl + shift f1-f12 urxvt
+	      int offset = num == 25 || num == 26 || num == 29 ? 12 : 13;
+	      event->key = num - offset; // TODO
+	      event->meta = TB_META_CTRLSHIFT;
+	    } else {
+	      event->meta = last == '@' ? 6 : last >> 4;
+	      event->key  = num; // ALSO TODO
+	    }
 
-	if (buf[kl-1] != 59) { // ';'
-		return false;
-	}
+  	}
 
-	if (buf[kl] < 50 || buf[kl] > 57) { // 2 to 9 ASCII
-		return false;
-	}
+  } else if (last == '~') { // 4 or 5 in length
 
-	if (buf[kl+1] != key[kl-1]) {
-		// printf("%d != %d\n", buf[kl+1], key[kl-1]);
-		return false;
-	}
+    if (len == 5) { // shift + f1-f8, linux/urxvt
 
-	event->ch = 0;
-	event->meta = buf[kl] - 48;
+  		int num = (seq[2]-48) * 10 + seq[3]-48; // f9 is 33, and should be 8
+      int offset = 25;
 
-	return true;
+      // TODO: mega fix this.
+
+/*
+      if (term == 'linux') {
+        offset = 15;
+
+        if (num == 25 || num == 26) // offset disparity
+          offset -= 1;
+        else if (num == 31) // F5
+          offset += 1;
+      } else {
+        offset = 13;
+
+        if (num == 25 || num == 26 || num == 29) // offset disparity
+          offset -= 1;
+      }
+*/
+      event->meta = TB_META_SHIFT;
+      event->key  = 0xFFFF - (num - offset);
+
+/*
+		// TODO: is this actually sent?
+    } else if (seq[3] == 3) { // mrxvt shift + insert
+
+      event->meta = TB_META_SHIFT;
+      event->key  = TB_KEY_INSERT;
+*/
+
+    } else {
+    	// not needed.
+      // event->key = len == 5 ? ((int)seq[3] * 10 + (int)seq[4]) : (int)seq[3];
+      res = -1;
+
+    }
+
+  } else {
+    res = -1;
+  }
+
+  return res;
 }
 
-#define known_codes_length 32
+static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 
-const char * known_codes[known_codes_length] = {
-	"\033[Z", // Shift+TAB
-	// "\033[2$", // Shift+Insert
-	"\033[3$", // Shift+Delete
-	"\033[5$", // Shift+PageUp
-	"\033[6$", // Shift+PageDown
-	"\033[7$", // Shift+Home
-	"\033[8$", // Shift+End
-  "\033[2^", // Ctrl+Insert
-	"\033[3^", // Ctrl+Delete
-	"\033[5^", // Ctrl+PageUp
-	"\033[6^", // Ctrl+PageDown
-	"\033[7^", // Ctrl+Home
-	"\033[8^", // Ctrl+End
-	"\033\033[a", // Alt+Shift+Up
-	"\033\033[b", // Alt+Shift+Down
-	"\033\033[c", // Alt+Shift+Left
-	"\033\033[d", // Alt+Shift+Right
-	"\033[a", // Shift+Up
-	"\033[b", // Shift+Down
-	"\033[c", // Shift+Left
-	"\033[d", // Shift+Right
-	"\033Oa", // Control+Up
-	"\033Ob", // Control+Down
-	"\033Oc", // Control+Left
-	"\033Od",  // Control+Right
+	if (len == 1) {
+	  event->key  = TB_KEY_ESC;
+    return 1;
 
-	// mrxvt
-	// "\033[7;5~", // Ctrl+Home
-	// "\033[8;5~", // Ctrl+End
-  "\033[7~",  // Home
-  "\033[8~",  // End
-	"\033[5;6~", // CtrlShift+PageUp
-	"\033[6;6~", // CtrlShift+PageDown
-	"\033[7;6~", // CtrlShift+Home
-	"\033[8;6~", // CtrlShift+End
+  } else if (len == 2) { // alt+char or alt+shift+char or alt + enter
+    event->meta = seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
 
-  // xterm
-	"\033[5;5~", // Ctrl+PageUp
-	"\033[6;5~", // Ctrl+PageDown
-	// "\033OH",    // Ctrl+Home (xterm)
-	// "\033OF",    // Ctrl+End (xterm)
-};
+    switch(seq[1]) {
+    	case 10:
+    	  event->key = TB_KEY_ENTER; break;
+    	case 127:
+    	  event->key = TB_KEY_BACKSPACE; break;
+    	default:
+    		event->ch  = seq[1]; break;
+    }
 
-int known_codes_keys[known_codes_length][2] = {
-	// global, apparently
-	{ TB_KEY_TAB,          TB_META_SHIFT },
+    return 1;
+  }
 
-	// urxvt
-	// { TB_KEY_INSERT,      TB_META_SHIFT },
-	{ TB_KEY_DELETE,      TB_META_SHIFT },
-	{ TB_KEY_PGUP,        TB_META_SHIFT },
-	{ TB_KEY_PGDN,        TB_META_SHIFT },
-	{ TB_KEY_HOME,        TB_META_SHIFT },
-	{ TB_KEY_END,         TB_META_SHIFT },
-	{ TB_KEY_INSERT,      TB_META_CTRL },
-	{ TB_KEY_DELETE,      TB_META_CTRL },
-	{ TB_KEY_PGUP,        TB_META_CTRL },
-	{ TB_KEY_PGDN,        TB_META_CTRL },
-	{ TB_KEY_HOME,        TB_META_CTRL },
-	{ TB_KEY_END,         TB_META_CTRL },
-	{ TB_KEY_ARROW_UP,    TB_META_ALTSHIFT },
-	{ TB_KEY_ARROW_DOWN,  TB_META_ALTSHIFT },
-	{ TB_KEY_ARROW_RIGHT, TB_META_ALTSHIFT },
-	{ TB_KEY_ARROW_LEFT,  TB_META_ALTSHIFT },
-	{ TB_KEY_ARROW_UP,    TB_META_SHIFT },
-	{ TB_KEY_ARROW_DOWN,  TB_META_SHIFT },
-	{ TB_KEY_ARROW_RIGHT, TB_META_SHIFT },
-	{ TB_KEY_ARROW_LEFT,  TB_META_SHIFT },
-	{ TB_KEY_ARROW_UP,    TB_META_CTRL  },
-	{ TB_KEY_ARROW_DOWN,  TB_META_CTRL  },
-	{ TB_KEY_ARROW_RIGHT, TB_META_CTRL  },
-	{ TB_KEY_ARROW_LEFT,  TB_META_CTRL  },
-
-	// mrxvt
-  { TB_KEY_HOME,        0 },
-  { TB_KEY_END,         0 },
-	{ TB_KEY_PGDN,        TB_META_CTRLSHIFT },
-	{ TB_KEY_PGUP,        TB_META_CTRLSHIFT },
-	{ TB_KEY_HOME,        TB_META_CTRLSHIFT },
-	{ TB_KEY_END,         TB_META_CTRLSHIFT },
-
-	// xterm
-	{ TB_KEY_PGDN,        TB_META_CTRL },
-	{ TB_KEY_PGUP,        TB_META_CTRL },
-	// { TB_KEY_HOME,        TB_META_CTRL },
-	// { TB_KEY_END,         TB_META_CTRL }
-};
-
-// convert escape sequence to event, and return consumed bytes on success (failure == 0)
-static int parse_escape_seq(struct tb_event *event, const char *buf, int len)
-{
-	int mouse_parsed = parse_mouse_event(event, buf, len);
-
-	if (mouse_parsed != 0)
-		return mouse_parsed;
-
-	// it's pretty simple here, find 'starts_with' match and return
-	// success, else return failure
 	int i;
-
-  // printf("term: %s\n", term_name);
-  int is_linux = strcmp(term_name, "linux") == 0 ? 1 : 0;
-
-  if (!is_linux) {
-		for (i = 0; i < known_codes_length; i++) {
-			// printf("\nbuf: [%d] --> ", len); for (int a = 0; a < len; a++) { printf("%d ", buf[a]); }
-			if (starts_with(buf, len, known_codes[i])) {
-				// printf(" ------ found: %d\n", i);
-				event->ch   = 0;
-				event->key  = known_codes_keys[i][0];
-				event->meta = known_codes_keys[i][1];
-				return strlen(known_codes[i]);
-			}
-		}
-	}
-
-	char desc[20];
 	for (i = 0; keys[i]; i++) {
-
-		if (starts_with(buf, len, keys[i])) {
-			event->ch = 0;
-			event->key = 0xFFFF-i;
-			return strlen(keys[i]);
+		if (starts_with(seq, len, keys[i])) {
+		  event->ch = 0;
+		  event->key = 0xFFFF-i;
+		  return 1; // strlen(keys[i]);
 		}
+  }
 
-    if (is_linux) continue;
+  int last, num;
+	switch(seq[1]) {
+		case '[':
+		  if (parse_bracket_esc(event, seq, len) == 0)
+		    return 1;
+			break;
 
-		if (parse_meta_key(event, buf, keys[i])) {
-			event->key = 0xFFFF-i;
-			return strlen(keys[i]) + 2;
-		}
+		case 'O':
+      if (seq[2] > 96 && seq[2] < 101) { // ctrl + arrows mrxvt/urxvt
+        event->meta = TB_META_CTRL;
+        event->key  = 0xFFFF + (seq[2] - 118);
 
-		if (keys[i][1] == 79 || (keys[i][1] == 91 && strlen(keys[i]) == 3)) { // 'O'
-			// For some crazy reason xterm sends LeftArrow as [27,79,68]
-			// but Shift+LeftArrow as [27,91,49,59,50,68]
-			// the extra [59, 50] was expected but not the [79] -> [91,49]
-			// Basically seems to be sent in SS3 format in the first case
-			// but in CSI format in the second !
-			// http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-PC-Style-Function-Keys
-			int keylen = strlen(keys[i]);
-			char k2[4]; // k2[keylen+1];
-			k2[0] = keys[i][0];
-			k2[1] = 91;
-			k2[2] = 49;
+      } else if (seq[2] == 49) { // xfce4 arrow keys
+        event->key  = 0xFFFF + (seq[len-1] - 80);
+        event->meta = TB_META_CTRLSHIFT;
 
-			int a;
-			for (a = 2; a < keylen; a++) {
-				k2[a+1] = keys[i][a];
-			}
+// not needed. parsed previously.
+//      } else if (65 <= seq[2] && seq[2] <= 68) { // arrows xterm/mrxvt
+//        event->key  = 0xFFFF + (seq[2] - 86);
+//        event->meta = 0;
 
-			sprintf(desc, " k2 (%d): %d, %d, %d", (int)strlen(k2), k2[0], k2[1], k2[2]);
-			if (parse_meta_key(event, buf, k2)) {
-				if (buf[2] != 49) {
-					switch(buf[2]) {
-						case 66:
-						  event->key = TB_KEY_ARROW_DOWN;
-						  break;
-						case 67:
-							event->key = TB_KEY_ARROW_RIGHT;
-							break;
-						case 68:
-							event->key = TB_KEY_ARROW_LEFT;
-							break;
-						default:
-							break;
-					}
-					event->meta = 0;
-				} else {
-					event->key = 0xFFFF - i;
-				}
+      } else { /* unknown */ }
 
-				return strlen(k2) + 2;
-			}
-		}
+      return 1;
+			break;
+
+    case 27: // double esc, urxvt territory
+
+      last = seq[len-1];
+      // TODO: check what happens when issuing CTRL+PAGEDOWN and then ALT+PAGEUP repeatedly
+
+      switch(last) {
+        case 'R': // mrxvt alt + f3
+          event->meta = TB_META_ALT;
+          event->key  = 0xFFFF - 2;
+          break;
+
+        case '~': // urxvt alt + key or f1-f12
+          event->meta = TB_META_ALT;
+
+        	if (len == 6) { // f1-f12
+        		num = (seq[3]-48) * 10 + seq[4]-48; // f9 is 20
+        		event->key = 0xFFFF - (num - 12);
+        	} else { // ins/del/etc
+        		num = (int)seq[3];
+		  			int offset = num < 53 ? 38 : num > 54 ? 41 : 37;
+			      event->key = 0xFFFF - (num - offset);
+        	}
+
+          break;
+
+        case '^':
+        case '@': // ctrl + alt + arrows
+          event->meta = last == '^' ? TB_META_ALTCTRL : TB_META_ALTCTRLSHIFT;
+          event->key  = seq[5];
+          break;
+
+        default:
+
+          if ('a' <= last && last <= 'z') { // urxvt ctr/alt arrow or ctr/shift/alt arrow
+            event->meta = seq[2] == 91 ? TB_META_ALTSHIFT : seq[4] == 'O' ? TB_META_ALTCTRL : TB_META_ALTCTRLSHIFT;
+            event->key  = 0xFFFF + (last - 118);
+
+          } else if ('A' <= last && last <= 'Z') { // urxvt alt + arrow keys
+            event->meta = TB_META_ALT;
+            event->key  = 0xFFFF + (last - 86);
+          } else {
+            return -1;
+          }
+
+          break;
+        }
+
+    	break; // case 27
+
+		default:
+
+      if ('A' <= seq[3] && seq[3] <= 'Z') { // linux ctrl+alt+key
+        event->meta = TB_META_ALTCTRL;
+        event->ch = seq[3];
+      } else {
+        return -1;
+      }
+
+		  printf("Unknown: %d\n", seq[1]);
+			break;
 	}
-	return 0;
+
+  return 1;
 }
-*/
 
-/*
-static bool extractx_event(struct tb_event *event, struct bytebuffer *inbuf, int inputmode)
-{
-	const char *buf = inbuf->buf;
-	const int len = inbuf->len;
-	if (len == 0)
-		return false;
+static void decode_char(struct tb_event * event, uint32_t ch) {
+  if (ch == 127) {
+    event->key = TB_KEY_BACKSPACE2;
 
-	if (buf[0] == '\033') {
+  } else if (ch < 32) { // ctrl + a-z or number up to 7
+    event->meta = ch == 13 ? 0 : TB_META_CTRL;
+    event->key = ch;
+    // event->ch  = ch + 97; // we don't want it to be printed
 
-		int n = parse_escape_seq(event, buf, len);
-		if (n != 0) {
-			bool success = true;
-			if (n < 0) {
-				success = false;
-				n = -n;
-			}
-			bytebuffer_truncate(inbuf, n);
-			return success;
-		} else {
-			// it's not escape sequence, then it's ALT or ESC,
-			// check inputmode
-			if (inputmode&TB_INPUT_ESC) {
-				// if we're in escape mode, fill ESC event, pop
-				// buffer, return success
-				event->ch = 0;
-				event->key = TB_KEY_ESC;
-				event->mod = 0;
-				bytebuffer_truncate(inbuf, 1);
-				return true;
-			} else if (inputmode&TB_INPUT_ALT) {
-				// if we're in alt mode, set ALT modifier to
-				// event and redo parsing
-				event->mod = TB_MOD_ALT;
-				bytebuffer_truncate(inbuf, 1);
-				return extractx_event(event, inbuf, inputmode);
-			}
-			assert(!"never got here");
-		}
-	}
-
-	// if we're here, this is not an escape sequence and not an alt sequence
-	// so, it's a FUNCTIONAL KEY or a UNICODE character
-
-	// first of all check if it's a functional key
-	if ((unsigned char)buf[0] <= TB_KEY_SPACE ||
-			(unsigned char)buf[0] == TB_KEY_BACKSPACE2)
-	{
-		// fill event, pop buffer, return success
-		event->ch = 0;
-		event->key = (uint16_t)buf[0];
-		bytebuffer_truncate(inbuf, 1);
-		return true;
-	}
-
-	// feh... we got utf8 here
-
-	// check if there is all bytes
-	if (len >= tb_utf8_char_length(buf[0])) {
-		// everything ok, fill event, pop buffer, return success
-		tb_utf8_char_to_unicode(&event->ch, buf);
-		event->key = 0;
-		bytebuffer_truncate(inbuf, tb_utf8_char_length(buf[0]));
-		return true;
-	}
-
-	// event isn't recognized, perhaps there is not enough bytes in utf8
-	// sequence
-	return false;
+  } else { // a-z -- A-Z -- 0-9
+    event->meta = ('A' <= ch && ch <= 'Z') ? TB_META_SHIFT : 0;
+    event->ch = ch;
+  }
 }
-*/
