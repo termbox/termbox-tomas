@@ -692,8 +692,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	// tb_select_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
-	tb_select_input_mode(TB_INPUT_ESC);
+	tb_select_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+	// tb_select_input_mode(TB_INPUT_ESC);
 	struct tb_event ev;
 
 	tb_clear();

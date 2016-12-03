@@ -615,9 +615,9 @@ static void update_size(void)
 }
 
 
-int maxseq = 8;
+int maxseq = 14; // need to make room for urxvt mouse sequences
 int cutesc = 0;
-static char seq[8];
+static char seq[14];
 
 static int read_and_extract_event(struct tb_event * event) {
   int nread, rs;
