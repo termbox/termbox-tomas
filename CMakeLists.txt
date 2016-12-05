@@ -49,18 +49,19 @@ set(SRC src/termbox.c src/utf8.c)
 add_library(${PROJECT_NAME}-static STATIC ${SRC})
 set_target_properties(${PROJECT_NAME}-static PROPERTIES OUTPUT_NAME ${PROJECT_NAME} PREFIX "")
 
-add_library(${PROJECT_NAME}-shared SHARED ${SRC})
-set_target_properties(${PROJECT_NAME}-shared PROPERTIES OUTPUT_NAME ${PROJECT_NAME} PREFIX "")
+#add_library(${PROJECT_NAME}-shared SHARED ${SRC})
+#set_target_properties(${PROJECT_NAME}-shared PROPERTIES OUTPUT_NAME ${PROJECT_NAME} PREFIX "")
 
-file(GLOB DEMOS src/demo/*.c)
-foreach(DEMO ${DEMOS})
-	get_filename_component(DEMOEXE ${DEMO} NAME_WE)
-	add_executable(${DEMOEXE} ${DEMO})
-	add_dependencies(${DEMOEXE} ${PROJECT_NAME}-static)
-	target_link_libraries(${DEMOEXE} ${PROJECT_NAME}-static)
-endforeach()
+#file(GLOB DEMOS src/demo/*.c)
+#foreach(DEMO ${DEMOS})
+#	get_filename_component(DEMOEXE ${DEMO} NAME_WE)
+#	add_executable(${DEMOEXE} ${DEMO})
+#	add_dependencies(${DEMOEXE} ${PROJECT_NAME}-static)
+#	target_link_libraries(${DEMOEXE} ${PROJECT_NAME}-static)
+#endforeach()
 
-install(TARGETS ${PROJECT_NAME}-static ${PROJECT_NAME}-shared
+#install(TARGETS ${PROJECT_NAME}-static ${PROJECT_NAME}-shared
+install(TARGETS ${PROJECT_NAME}-static
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib
 )
