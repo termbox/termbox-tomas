@@ -813,6 +813,7 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 			break;
 
     case 27: // double esc, urxvt territory
+
       last = seq[len-1];
       // TODO: check what happens when issuing CTRL+PAGEDOWN and then ALT+PAGEUP repeatedly
 
@@ -843,9 +844,9 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
           break;
 
         default:
-          if ('a' <= last && last <= 'z') { // urxvt ctr/alt arrow or ctr/shift/alt arrow
 
-            event->meta = seq[4] == 'O' ? TB_META_ALTCTRL : TB_META_ALTCTRLSHIFT;
+          if ('a' <= last && last <= 'z') { // urxvt ctr/alt arrow or ctr/shift/alt arrow
+            event->meta = seq[2] == 91 ? TB_META_ALTSHIFT : seq[4] == 'O' ? TB_META_ALTCTRL : TB_META_ALTCTRLSHIFT;
             event->key  = 0xFFFF + (last - 118);
 
           } else if ('A' <= last && last <= 'Z') { // urxvt alt + arrow keys
