@@ -261,6 +261,21 @@ void tb_change_cell(int x, int y, uint32_t ch, uint16_t fg, uint16_t bg)
 	tb_put_cell(x, y, &c);
 }
 
+int tb_print(int x, int y, uint16_t fg, uint16_t bg, char *str) {
+  uint32_t uni;
+  int c;
+  c = 0;
+
+  while (*str) {
+    str += tb_utf8_char_to_unicode(&uni, str);
+    tb_change_cell(x, y, uni, fg, bg);
+    x++;
+    c++;
+  }
+
+  return c;
+}
+
 void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells)
 {
 	if (x + w < 0 || x >= back_buffer.width)
