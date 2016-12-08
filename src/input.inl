@@ -193,13 +193,16 @@ static int parse_bracket_esc(struct tb_event *event, const char *seq, int len) {
     	}
 
     } else if ('A' <= last && last <= 'Z') {
+
       event->meta = seq[4] - 48;
 
       if (last >= 80) { // f1-f4 xterm
+
         // event->key = last - 69; // TODO: verify
         event->key = 0xFFFF + (last - 86);
-      } else {  // ctrl + arrows urxvt
-        event->key = 0xFFFF + (last - 86);
+      } else {  // ctrl + arrows urxvt or shift+home/end in xfce4-term
+        int offset = last == 70 ? 85 : 86; // handle shift+end offset in xfce4
+        event->key = 0xFFFF + (last - offset);
       }
 
     } else {
@@ -309,7 +312,7 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
     	  event->key = TB_KEY_BACKSPACE; break;
     	default:
             if (seq[1] < 27) { // ctrl+alt+char
-              event->ch  = seq[1] + 96; 
+              event->ch  = seq[1] + 96;
               event->key = seq[1];
             } else {
       		  event->ch  = seq[1]; break;
