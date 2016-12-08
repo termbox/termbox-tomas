@@ -643,10 +643,19 @@ static int read_and_extract_event(struct tb_event * event) {
   } else { // either esc or unicode
 
     nread = 1;
+    int prev;
     while (nread < maxseq) {
+      prev = seq[nread];
       rs = read(inout, seq + nread++, 1);
       if (rs == -1) return -1;
-      if (rs == 0) break;
+      if (rs == 0) { 
+        if (nread == 2 && seq[nread-1] == prev) { // weird buffering case in mrxvt, retry
+          nread--;
+          continue;
+        }
+        break;
+      }
+
 
       // handle urxvt alt + keys
       if (seq[nread-1] == 27) { // found another escape char!
