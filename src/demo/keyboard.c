@@ -335,10 +335,10 @@ struct combo func_combos[] = {
 	{{K_END,0}},
 	{{K_PGU,0}},
 	{{K_PGD,0}},
-	{{K_ARROW_UP,0}},
-	{{K_ARROW_DOWN,0}},
 	{{K_ARROW_LEFT,0}},
-	{{K_ARROW_RIGHT,0}}
+	{{K_ARROW_RIGHT,0}},
+	{{K_ARROW_DOWN,0}},
+	{{K_ARROW_UP,0}}
 };
 
 void print_tb(const char *str, int x, int y, uint16_t fg, uint16_t bg)
@@ -583,15 +583,15 @@ const char *funckeymap(int k)
 		"END",
 		"PGUP",
 		"PGDN",
-		"ARROW UP",
-		"ARROW DOWN",
 		"ARROW LEFT",
-		"ARROW RIGHT"
+		"ARROW RIGHT",
+		"ARROW DOWN",
+		"ARROW UP"
 	};
 
 	if (k == TB_KEY_CTRL_8)
 		return "CTRL+8, BACKSPACE 2"; /* 0x7F */
-	else if (k >= TB_KEY_ARROW_RIGHT && k <= 0xFFFF)
+	else if (k >= TB_KEY_ARROW_UP && k <= 0xFFFF)
 		return fkmap[0xFFFF-k];
 	else if (k <= TB_KEY_SPACE)
 		return fcmap[k];
@@ -614,8 +614,7 @@ void pretty_print_press(struct tb_event *ev)
 	printf_tb(60, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->ch);
 	printf_tb(60, 22, TB_RED   , TB_DEFAULT, "string:  %s", buf);
 
-	printf_tb(54, 18, TB_WHITE, TB_DEFAULT, "Modifier: %s",
-			(ev->mod) ? "TB_MOD_ALT" : "none");
+	printf_tb(54, 18, TB_WHITE, TB_DEFAULT, "Meta: %d", ev->meta);
 
 }
 
@@ -651,17 +650,20 @@ void  pretty_print_mouse(struct tb_event *ev) {
 	counter++;
 	printf_tb(43, 19, TB_WHITE, TB_DEFAULT, "Key: ");
 	printf_tb(48, 19, TB_YELLOW, TB_DEFAULT, btn, counter);
+
+	printf_tb(43, 20, TB_WHITE, TB_DEFAULT, "Meta: %d ", ev->meta);
+
 }
 
 void dispatch_press(struct tb_event *ev)
 {
-	if (ev->mod & TB_MOD_ALT) {
+	if (ev->meta == TB_META_ALT || ev->meta == TB_META_ALTSHIFT || ev->meta == TB_META_ALTCTRL) {
 		draw_key(K_LALT, TB_WHITE, TB_RED);
 		draw_key(K_RALT, TB_WHITE, TB_RED);
 	}
 
 	struct combo *k = 0;
-	if (ev->key >= TB_KEY_ARROW_RIGHT)
+	if (ev->key >= TB_KEY_ARROW_UP)
 		k = &func_combos[0xFFFF-ev->key];
 	else if (ev->ch < 128) {
 		if (ev->ch == 0 && ev->key < 128)
@@ -691,6 +693,7 @@ int main(int argc, char **argv)
 	}
 
 	tb_select_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+	// tb_select_input_mode(TB_INPUT_ESC);
 	struct tb_event ev;
 
 	tb_clear();
@@ -699,6 +702,8 @@ int main(int argc, char **argv)
 	int inputmode = 0;
 	int ctrlxpressed = 0;
 
+	tb_set_title("Keyboard demo");
+
 	while (tb_poll_event(&ev)) {
 		switch (ev.type) {
 		case TB_EVENT_KEY:
@@ -706,7 +711,12 @@ int main(int argc, char **argv)
 				tb_shutdown();
 				return 0;
 			}
-			if (ev.key == TB_KEY_CTRL_C && ctrlxpressed) {
+			if (ev.key == TB_KEY_CTRL_C) {
+				tb_shutdown();
+				return 0;
+			}
+
+			if (ev.key == TB_KEY_BACKSPACE && ev.meta == TB_META_ALT) {
 				static int chmap[] = {
 					TB_INPUT_ESC | TB_INPUT_MOUSE, /* 101 */
 					TB_INPUT_ALT | TB_INPUT_MOUSE, /* 110 */
@@ -724,7 +734,7 @@ int main(int argc, char **argv)
 			else
 				ctrlxpressed = 0;
 
-			tb_clear();
+			// tb_clear();
 			draw_keyboard();
 			dispatch_press(&ev);
 			pretty_print_press(&ev);
@@ -737,7 +747,7 @@ int main(int argc, char **argv)
 			tb_present();
 			break;
 		case TB_EVENT_MOUSE:
-			tb_clear();
+			// tb_clear();
 			draw_keyboard();
 			pretty_print_mouse(&ev);
 			tb_present();

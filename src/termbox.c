@@ -39,7 +39,8 @@ static struct bytebuffer input_buffer;
 static int termw = -1;
 static int termh = -1;
 
-static int inputmode = TB_INPUT_ESC;
+static bool title_set = false;
+static int inputmode  = TB_INPUT_ESC;
 static int outputmode = TB_OUTPUT_NORMAL;
 
 static int inout;
@@ -55,6 +56,7 @@ static uint16_t foreground = TB_DEFAULT;
 
 static void write_cursor(int x, int y);
 static void write_sgr(uint16_t fg, uint16_t bg);
+static void write_title(const char * title);
 
 static void cellbuf_init(struct cellbuf *buf, int width, int height);
 static void cellbuf_resize(struct cellbuf *buf, int width, int height);
@@ -102,6 +104,15 @@ int tb_init_fd(int inout_)
 	struct termios tios;
 	memcpy(&tios, &orig_tios, sizeof(tios));
 
+/*
+  tios.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+  tios.c_oflag &= ~(OPOST);
+  tios.c_cflag |= (CS8);
+  tios.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+  tios.c_cc[VMIN] = 0;  // Return each byte, or zero for timeout.
+  tios.c_cc[VTIME] = 1; // 100 ms timeout (unit is tens of second).
+*/
+
 	tios.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
                            | INLCR | IGNCR | ICRNL | IXON);
 	tios.c_oflag &= ~OPOST;
@@ -110,6 +121,7 @@ int tb_init_fd(int inout_)
 	tios.c_cflag |= CS8;
 	tios.c_cc[VMIN] = 0;
 	tios.c_cc[VTIME] = 0;
+
 	tcsetattr(inout, TCSAFLUSH, &tios);
 
 	bytebuffer_init(&input_buffer, 128);
@@ -145,6 +157,7 @@ void tb_shutdown(void)
 		abort();
 	}
 
+	if (title_set) write_title("");
 	bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
 	bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
 	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
@@ -228,6 +241,11 @@ void tb_set_cursor(int cx, int cy)
 		write_cursor(cursor_x, cursor_y);
 }
 
+void tb_set_title(const char * title) {
+	title_set = true;
+	write_title(title);
+}
+
 void tb_put_cell(int x, int y, const struct tb_cell *cell)
 {
 	if ((unsigned)x >= (unsigned)back_buffer.width)
@@ -241,6 +259,21 @@ void tb_change_cell(int x, int y, uint32_t ch, uint16_t fg, uint16_t bg)
 {
 	struct tb_cell c = {ch, fg, bg};
 	tb_put_cell(x, y, &c);
+}
+
+int tb_print(int x, int y, uint16_t fg, uint16_t bg, char *str) {
+  uint32_t uni;
+  int c;
+  c = 0;
+
+  while (*str) {
+    str += tb_utf8_char_to_unicode(&uni, str);
+    tb_change_cell(x, y, uni, fg, bg);
+    x++;
+    c++;
+  }
+
+  return c;
 }
 
 void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells)
@@ -422,6 +455,10 @@ static void write_sgr(uint16_t fg, uint16_t bg) {
 	}
 }
 
+static void write_title(const char * title) {
+	printf("%c]0;%s%c\n", '\033', title, '\007');
+}
+
 static void cellbuf_init(struct cellbuf *buf, int width, int height)
 {
 	buf->cells = (struct tb_cell*)malloc(sizeof(struct tb_cell) * width * height);
@@ -578,7 +615,9 @@ static void sigwinch_handler(int xxx)
 {
 	(void) xxx;
 	const int zzz = 1;
-	write(winch_fds[1], &zzz, sizeof(int));
+
+  int unused __attribute__((unused));
+	unused = write(winch_fds[1], &zzz, sizeof(int));
 }
 
 static void update_size(void)
@@ -590,88 +629,113 @@ static void update_size(void)
 	send_clear();
 }
 
-static int read_up_to(int n) {
-	assert(n > 0);
-	const int prevlen = input_buffer.len;
-	bytebuffer_resize(&input_buffer, prevlen + n);
 
-	int read_n = 0;
-	while (read_n <= n) {
-		ssize_t r = 0;
-		if (read_n < n) {
-			r = read(inout, input_buffer.buf + prevlen + read_n, n - read_n);
-		}
-#ifdef __CYGWIN__
-		// While linux man for tty says when VMIN == 0 && VTIME == 0, read
-		// should return 0 when there is nothing to read, cygwin's read returns
-		// -1. Not sure why and if it's correct to ignore it, but let's pretend
-		// it's zero.
-		if (r < 0) r = 0;
-#endif
-		if (r < 0) {
-			// EAGAIN / EWOULDBLOCK shouldn't occur here
-			assert(errno != EAGAIN && errno != EWOULDBLOCK);
-			return -1;
-		} else if (r > 0) {
-			read_n += r;
+int maxseq = 14; // need to make room for urxvt mouse sequences
+int cutesc = 0;
+static char seq[14];
+
+static int read_and_extract_event(struct tb_event * event) {
+  int nread, rs;
+  int c = 0;
+
+  if (cutesc) {
+    c = 27;
+    cutesc = 0;
+  } else {
+    while ((nread = read(inout, &c, 1)) == 0);
+    if (nread == -1) return -1;
+  }
+
+  seq[0] = c;
+	event->type = TB_EVENT_KEY;
+  event->meta = 0;
+	event->ch   = 0;
+
+	if (c != 27 && 0 <= c && c <= 127) { // from ctrl-a to z, not esc
+		decode_char(event, c);
+    return 1;
+
+  } else { // either esc or unicode
+
+    nread = 1;
+    while (nread < maxseq) {
+      rs = read(inout, seq + nread++, 1);
+      if (rs == -1) return -1;
+      if (rs == 0) break;
+
+      // handle urxvt alt + keys
+      if (seq[nread-1] == 27) { // found another escape char!
+      	if (seq[nread-2] == 27) { // double esc
+      	  if (read(inout, seq + nread++, 1) == 0) { // end of the road, so it's alt+esc
+        		event->key  = TB_KEY_ESC;
+        		event->meta = TB_META_ALT;
+        		return 1;
+      	  } // if not end of road, then it must be ^[^[[A (urxvt alt+arrows)
+      	} else {
+	        cutesc = 1;
+	        break;
+      	}
+      }
+    }
+
+    if (nread == maxseq) return 0;
+    seq[nread] = '\0';
+
+    if (c == 27) {
+	  	int mouse_parsed = parse_mouse_event(event, seq, nread-1);
+	  	if (mouse_parsed != 0)
+	  	  return mouse_parsed;
+
+	  	return parse_esc_seq(event, seq, nread-1);
+
+    } else if (nread-1 >= tb_utf8_char_length(seq[0])) {
+
+    	uint32_t ch;
+			tb_utf8_char_to_unicode(&ch, seq);
+    	decode_char(event, ch);
+
+			// bytebuffer_truncate(inbuf, tb_utf8_char_length(seq[0]));
+			return 1;
 		} else {
-			bytebuffer_resize(&input_buffer, prevlen + read_n);
-			return read_n;
+			// unknown sequence
+			return -1;
 		}
-	}
-	assert(!"unreachable");
-	return 0;
+  }
 }
 
-static int wait_fill_event(struct tb_event *event, struct timeval *timeout)
-{
-	// ;-)
-#define ENOUGH_DATA_FOR_PARSING 64
+static int wait_fill_event(struct tb_event *event, struct timeval *timeout) {
+  int n;
 	fd_set events;
 	memset(event, 0, sizeof(struct tb_event));
 
-	// try to extract event from input buffer, return on success
-	event->type = TB_EVENT_KEY;
-	if (extract_event(event, &input_buffer, inputmode))
-		return event->type;
-
-	// it looks like input buffer is incomplete, let's try the short path,
-	// but first make sure there is enough space
-	int n = read_up_to(ENOUGH_DATA_FOR_PARSING);
-	if (n < 0)
-		return -1;
-	if (n > 0 && extract_event(event, &input_buffer, inputmode))
-		return event->type;
-
-	// n == 0, or not enough data, let's go to select
-	while (1) {
-		FD_ZERO(&events);
-		FD_SET(inout, &events);
-		FD_SET(winch_fds[0], &events);
-		int maxfd = (winch_fds[0] > inout) ? winch_fds[0] : inout;
-		int result = select(maxfd+1, &events, 0, 0, timeout);
-		if (!result)
-			return 0;
-
-		if (FD_ISSET(inout, &events)) {
-			event->type = TB_EVENT_KEY;
-			n = read_up_to(ENOUGH_DATA_FOR_PARSING);
-			if (n < 0)
-				return -1;
-
-			if (n == 0)
-				continue;
-
-			if (extract_event(event, &input_buffer, inputmode))
-				return event->type;
-		}
-		if (FD_ISSET(winch_fds[0], &events)) {
-			event->type = TB_EVENT_RESIZE;
-			int zzz = 0;
-			read(winch_fds[0], &zzz, sizeof(int));
-			buffer_size_change_request = 1;
-			get_term_size(&event->w, &event->h);
-			return TB_EVENT_RESIZE;
-		}
+	if (cutesc) { // there's a part of an escape sequence left!
+	  n = read_and_extract_event(event);
+	  if (n < 0) return -1;
+	  if (n > 0) return event->type;
 	}
+
+  while (1) {
+    FD_ZERO(&events);
+    FD_SET(inout, &events);
+    FD_SET(winch_fds[0], &events);
+    int maxfd  = (winch_fds[0] > inout) ? winch_fds[0] : inout;
+    int result = select(maxfd+1, &events, 0, 0, timeout);
+    if (!result) return 0;
+
+    if (FD_ISSET(winch_fds[0], &events)) {
+      event->type = TB_EVENT_RESIZE;
+      int zzz = 0;
+      n = read(winch_fds[0], &zzz, sizeof(int));
+      buffer_size_change_request = 1;
+      get_term_size(&event->w, &event->h);
+      return TB_EVENT_RESIZE;
+    }
+
+    if (FD_ISSET(inout, &events)) {
+      n = read_and_extract_event(event) > 0;
+      if (n < 0) return -1;
+      if (n > 0) return event->type;
+    }
+
+  }
 }

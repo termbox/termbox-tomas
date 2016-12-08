@@ -36,16 +36,23 @@ extern "C" {
 #define TB_KEY_END              (0xFFFF-15)
 #define TB_KEY_PGUP             (0xFFFF-16)
 #define TB_KEY_PGDN             (0xFFFF-17)
-#define TB_KEY_ARROW_UP         (0xFFFF-18)
-#define TB_KEY_ARROW_DOWN       (0xFFFF-19)
-#define TB_KEY_ARROW_LEFT       (0xFFFF-20)
-#define TB_KEY_ARROW_RIGHT      (0xFFFF-21)
+
+#define TB_KEY_ARROW_LEFT       (0xFFFF-18)
+#define TB_KEY_ARROW_RIGHT      (0xFFFF-19)
+#define TB_KEY_ARROW_DOWN       (0xFFFF-20)
+#define TB_KEY_ARROW_UP         (0xFFFF-21)
+
 #define TB_KEY_MOUSE_LEFT       (0xFFFF-22)
 #define TB_KEY_MOUSE_RIGHT      (0xFFFF-23)
 #define TB_KEY_MOUSE_MIDDLE     (0xFFFF-24)
 #define TB_KEY_MOUSE_RELEASE    (0xFFFF-25)
 #define TB_KEY_MOUSE_WHEEL_UP   (0xFFFF-26)
 #define TB_KEY_MOUSE_WHEEL_DOWN (0xFFFF-27)
+
+// #define TB_KEY_ARROW_UP         (0xFFFF-65)
+// #define TB_KEY_ARROW_DOWN       (0xFFFF-66)
+// #define TB_KEY_ARROW_RIGHT      (0xFFFF-67)
+// #define TB_KEY_ARROW_LEFT       (0xFFFF-68)
 
 /* These are all ASCII code points below SPACE character and a BACKSPACE key. */
 #define TB_KEY_CTRL_TILDE       0x00
@@ -93,6 +100,17 @@ extern "C" {
 #define TB_KEY_SPACE            0x20
 #define TB_KEY_BACKSPACE2       0x7F
 #define TB_KEY_CTRL_8           0x7F /* clash with 'BACKSPACE2' */
+
+enum {
+	TB_META_SHIFT = 2,
+	TB_META_ALT,
+	TB_META_ALTSHIFT,
+	TB_META_CTRL,
+	TB_META_CTRLSHIFT,
+	TB_META_ALTCTRL,
+	TB_META_ALTCTRLSHIFT,
+	TB_META_META
+};
 
 /* These are non-existing ones.
  *
@@ -153,9 +171,10 @@ struct tb_cell {
  */
 struct tb_event {
 	uint8_t type;
-	uint8_t mod; /* modifiers to either 'key' or 'ch' below */
+	// uint8_t mod; /* modifiers to either 'key' or 'ch' below */
 	uint16_t key; /* one of the TB_KEY_* constants */
 	uint32_t ch; /* unicode character */
+	uint8_t meta;
 	int32_t w;
 	int32_t h;
 	int32_t x;
@@ -206,6 +225,7 @@ SO_IMPORT void tb_present(void);
  * is hidden by default.
  */
 SO_IMPORT void tb_set_cursor(int cx, int cy);
+SO_IMPORT void tb_set_title(const char * title);
 
 /* Changes cell's parameters in the internal back buffer at the specified
  * position.
