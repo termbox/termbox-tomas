@@ -307,7 +307,7 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
   }
 
 	int i;
-	for (i = 0; keys[i]; i++) {
+	for (i = TB_KEYS_NUM-1; i >= 0; i--) {
 		if (starts_with(seq, len, keys[i])) {
 		  event->ch = 0;
 		  event->key = 0xFFFF-i;
