@@ -291,8 +291,9 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
 	  event->key  = TB_KEY_ESC;
     return 1;
 
-  } else if (len == 2) { // alt+char or alt+shift+char or alt + enter
-    event->meta = seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
+  } else if (len == 2) { // alt+char or alt+shift+char, ctrl+alt+char or alt + enter
+
+    event->meta = seq[1] < 27 ? TB_META_ALTCTRL : seq[1] >= 'A' && seq[1] <= 'Z' ? TB_META_ALTSHIFT : TB_META_ALT;
 
 #ifdef __APPLE__
     if (seq[1] == 'b' || seq[1] == 'f') { // alt+left/right
@@ -307,7 +308,12 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
     	case 127:
     	  event->key = TB_KEY_BACKSPACE; break;
     	default:
-    		event->ch  = seq[1]; break;
+            if (seq[1] < 27) { // ctrl+alt+char
+              event->ch  = seq[1] + 96; 
+              event->key = seq[1];
+            } else {
+      		  event->ch  = seq[1]; break;
+            }
     }
 
     return 1;
@@ -398,16 +404,8 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
     	break; // case 27
 
 		default:
-
-      if ('A' <= seq[3] && seq[3] <= 'Z') { // linux ctrl+alt+key
-        event->meta = TB_META_ALTCTRL;
-        event->ch = seq[3];
-      } else {
-        return -1;
-      }
-
 		  printf("Unknown: %d\n", seq[1]);
-			break;
+          return -1;
 	}
 
   return 1;
