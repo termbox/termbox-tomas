@@ -16,7 +16,6 @@ enum {
 	T_FUNCS_NUM,
 };
 
-
 #define ENTER_MOUSE_SEQ "\x1b[?1000h\x1b[?1002h\x1b[?1015h\x1b[?1006h"
 #define EXIT_MOUSE_SEQ "\x1b[?1006l\x1b[?1015l\x1b[?1002l\x1b[?1000l"
 
