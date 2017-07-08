@@ -196,9 +196,10 @@ struct tb_event {
  * finalized using the tb_shutdown() function.
  */
 SO_IMPORT int tb_init(void);
+SO_IMPORT int tb_init_screen(int clear);
 SO_IMPORT int tb_init_file(const char* name);
 SO_IMPORT int tb_init_fd(int inout);
-SO_IMPORT void tb_shutdown(void);
+SO_IMPORT void tb_shutdown(int clear);
 
 /* Returns the size of the internal back buffer (which is the same as
  * terminal's window size in characters). The internal buffer can be resized
@@ -213,6 +214,7 @@ SO_IMPORT int tb_height(void);
  * color/attributes set by tb_set_clear_attributes() function.
  */
 SO_IMPORT void tb_clear(void);
+SO_IMPORT void tb_clear_screen(void);
 SO_IMPORT void tb_set_clear_attributes(uint16_t fg, uint16_t bg);
 
 /* Synchronizes the internal back buffer with the terminal. */
@@ -220,12 +222,15 @@ SO_IMPORT void tb_present(void);
 
 #define TB_HIDE_CURSOR -1
 
+SO_IMPORT void tb_set_title(const char * title);
+SO_IMPORT void tb_puts(const char * str);
+SO_IMPORT int tb_print(int x, int y, uint16_t fg, uint16_t bg, char * str);
+
 /* Sets the position of the cursor. Upper-left character is (0, 0). If you pass
  * TB_HIDE_CURSOR as both coordinates, then the cursor will be hidden. Cursor
  * is hidden by default.
  */
 SO_IMPORT void tb_set_cursor(int cx, int cy);
-SO_IMPORT void tb_set_title(const char * title);
 
 /* Changes cell's parameters in the internal back buffer at the specified
  * position.

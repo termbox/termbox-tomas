@@ -1,3 +1,7 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE // for wcstring, strcasestr
+#endif
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -123,14 +127,20 @@ int tb_init_fd(int inout_)
 	tios.c_cc[VTIME] = 0;
 
 	tcsetattr(inout, TCSAFLUSH, &tios);
+	return 0;
+}
 
+int tb_init_screen(int clear) {
 	bytebuffer_init(&input_buffer, 128);
 	bytebuffer_init(&output_buffer, 32 * 1024);
 
-	bytebuffer_puts(&output_buffer, funcs[T_ENTER_CA]);
 	bytebuffer_puts(&output_buffer, funcs[T_ENTER_KEYPAD]);
-	bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
-	send_clear();
+	// bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
+
+	if (clear) {
+		bytebuffer_puts(&output_buffer, funcs[T_ENTER_CA]);
+		send_clear();
+	}
 
 	update_term_size();
 	cellbuf_init(&back_buffer, termw, termh);
@@ -141,16 +151,18 @@ int tb_init_fd(int inout_)
 	return 0;
 }
 
-int tb_init_file(const char* name){
+int tb_init_file(const char* name) {
 	return tb_init_fd(open(name, O_RDWR));
 }
 
-int tb_init(void)
-{
-	return tb_init_file("/dev/tty");
+int tb_init() {
+	int res = tb_init_file("/dev/tty");
+	if (res != 0) return res;
+
+	return tb_init_screen(1);
 }
 
-void tb_shutdown(void)
+void tb_shutdown(int clear)
 {
 	if (termw == -1) {
 		fputs("tb_shutdown() should not be called twice.", stderr);
@@ -160,8 +172,10 @@ void tb_shutdown(void)
 	if (title_set) write_title("");
 	bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
 	bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
-	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
-	bytebuffer_puts(&output_buffer, funcs[T_EXIT_CA]);
+	if (clear) {
+		bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
+		bytebuffer_puts(&output_buffer, funcs[T_EXIT_CA]);
+	}
 	bytebuffer_puts(&output_buffer, funcs[T_EXIT_KEYPAD]);
 	bytebuffer_puts(&output_buffer, funcs[T_EXIT_MOUSE]);
 	bytebuffer_flush(&output_buffer, inout);
@@ -227,6 +241,10 @@ void tb_present(void)
 	bytebuffer_flush(&output_buffer, inout);
 }
 
+void tb_puts(const char * str) {
+	bytebuffer_puts(&output_buffer, str); // same as append but without length
+	bytebuffer_flush(&output_buffer, inout);
+}
 void tb_set_cursor(int cx, int cy)
 {
 	if (IS_CURSOR_HIDDEN(cursor_x, cursor_y) && !IS_CURSOR_HIDDEN(cx, cy))
@@ -345,6 +363,10 @@ void tb_clear(void)
 		buffer_size_change_request = 0;
 	}
 	cellbuf_clear(&back_buffer);
+}
+
+void tb_clear_screen(void) {
+	return send_clear();
 }
 
 int tb_select_input_mode(int mode)
