@@ -334,6 +334,9 @@ SO_IMPORT int tb_peek_event(struct tb_event *event, int timeout);
  */
 SO_IMPORT int tb_poll_event(struct tb_event *event);
 
+/* Forcefully update the size of the buffers. */
+SO_IMPORT void tb_update_size(void);
+
 /* Utility utf8 functions. */
 #define TB_EOF -1
 SO_IMPORT int tb_utf8_char_length(char c);
