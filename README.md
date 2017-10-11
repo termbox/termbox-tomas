@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   int h = tb_height();
 
   // now, put some text in the middle of the screen
-  tb_print((w/2)-6, h/2, bg_color, fg_color, str);
+  tb_print((w/2)-10, h/2, bg_color, fg_color, str);
 
   // flush the output to the screen
   tb_present();
