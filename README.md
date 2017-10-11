@@ -28,6 +28,7 @@ And release the kraken:
 
 Termbox's has a very clean interface. Here's your basic 'hello world':
 
+```c
     #include <unistd.h> // for sleep()
     #include "termbox.h"
 
@@ -59,9 +60,11 @@ Termbox's has a very clean interface. Here's your basic 'hello world':
 
       return 0;
     }
+```
 
 Ok, now let's capture some input. Instead of the `sleep()` statement above, we could do this:
 
+```c
     ...
     tb_present();
 
@@ -96,6 +99,7 @@ Ok, now let's capture some input. Instead of the `sleep()` statement above, we c
     done: // shutdown logic
     tb_shutdown();
     ...
+```
 
 For more information, take a look at [the demos](https://github.com/tomas/termbox/tree/master/demos) or check the [termbox.h](https://github.com/tomas/termbox/blob/master/src/termbox.h) header for the full termbox API.
 
