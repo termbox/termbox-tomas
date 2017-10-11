@@ -341,25 +341,6 @@ struct combo func_combos[] = {
 	{{K_ARROW_UP,0}}
 };
 
-void print_tb(const char *str, int x, int y, uint32_t fg, uint32_t bg)
-{
-	while (*str) {
-		uint32_t uni;
-		str += tb_utf8_char_to_unicode(&uni, str);
-		tb_change_cell(x, y, uni, fg, bg);
-		x++;
-	}
-}
-
-void printf_tb(int x, int y, uint32_t fg, uint32_t bg, const char *fmt, ...)
-{
-	char buf[4096];
-	va_list vl;
-	va_start(vl, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, vl);
-	va_end(vl);
-	print_tb(buf, x, y, fg, bg);
-}
 
 void draw_key(struct key *k, uint32_t fg, uint32_t bg)
 {
@@ -509,9 +490,9 @@ void draw_keyboard()
 	draw_key(K_K_0, TB_WHITE, TB_BLUE);
 	draw_key(K_K_PERIOD, TB_WHITE, TB_BLUE);
 
-	printf_tb(33, 1, TB_MAGENTA | TB_BOLD, TB_DEFAULT, "Keyboard demo!");
-	printf_tb(21, 2, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+Q to exit)");
-	printf_tb(15, 3, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+C to change input mode)");
+	tb_print(33, 1, TB_MAGENTA | TB_BOLD, TB_DEFAULT, "Keyboard demo!");
+	tb_print(21, 2, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+Q to exit)");
+	tb_print(15, 3, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+C to change input mode)");
 
 	int inputmode = tb_select_input_mode(0);
 	char inputmode_str[64];
@@ -524,7 +505,7 @@ void draw_keyboard()
 	if (inputmode & TB_INPUT_MOUSE)
 		sprintf(inputmode_str, "%s | TB_INPUT_MOUSE", inputmode_str);
 
-	printf_tb(3, 18, TB_WHITE, TB_DEFAULT, "Input mode: %s", inputmode_str);
+	tb_printf(3, 18, TB_WHITE, TB_DEFAULT, "Input mode: %s", inputmode_str);
 }
 
 const char *funckeymap(int k)
@@ -602,31 +583,31 @@ void pretty_print_press(struct tb_event *ev)
 {
 	char buf[7];
 	buf[tb_utf8_unicode_to_char(buf, ev->ch)] = '\0';
-	printf_tb(3, 19, TB_WHITE , TB_DEFAULT, "Key: ");
-	printf_tb(8, 19, TB_YELLOW, TB_DEFAULT, "decimal: %d", ev->key);
-	printf_tb(8, 20, TB_GREEN , TB_DEFAULT, "hex:     0x%X", ev->key);
-	printf_tb(8, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->key);
-	printf_tb(8, 22, TB_RED   , TB_DEFAULT, "string:  %s", funckeymap(ev->key));
+	tb_printf(3, 19, TB_WHITE , TB_DEFAULT, "Key: ");
+	tb_printf(8, 19, TB_YELLOW, TB_DEFAULT, "decimal: %d", ev->key);
+	tb_printf(8, 20, TB_GREEN , TB_DEFAULT, "hex:     0x%X", ev->key);
+	tb_printf(8, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->key);
+	tb_printf(8, 22, TB_RED   , TB_DEFAULT, "string:  %s", funckeymap(ev->key));
 
-	printf_tb(54, 19, TB_WHITE , TB_DEFAULT, "Char: ");
-	printf_tb(60, 19, TB_YELLOW, TB_DEFAULT, "decimal: %d", ev->ch);
-	printf_tb(60, 20, TB_GREEN , TB_DEFAULT, "hex:     0x%X", ev->ch);
-	printf_tb(60, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->ch);
-	printf_tb(60, 22, TB_RED   , TB_DEFAULT, "string:  %s", buf);
+	tb_printf(54, 19, TB_WHITE , TB_DEFAULT, "Char: ");
+	tb_printf(60, 19, TB_YELLOW, TB_DEFAULT, "decimal: %d", ev->ch);
+	tb_printf(60, 20, TB_GREEN , TB_DEFAULT, "hex:     0x%X", ev->ch);
+	tb_printf(60, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->ch);
+	tb_printf(60, 22, TB_RED   , TB_DEFAULT, "string:  %s", buf);
 
-	printf_tb(54, 18, TB_WHITE, TB_DEFAULT, "Meta: %d", ev->meta);
+	tb_printf(54, 18, TB_WHITE, TB_DEFAULT, "Meta: %d", ev->meta);
 
 }
 
 void pretty_print_resize(struct tb_event *ev)
 {
-	printf_tb(3, 19, TB_WHITE, TB_DEFAULT, "Resize event: %d x %d", ev->w, ev->h);
+	tb_printf(3, 19, TB_WHITE, TB_DEFAULT, "Resize event: %d x %d", ev->w, ev->h);
 }
 
 int counter = 0;
 
 void  pretty_print_mouse(struct tb_event *ev) {
-	printf_tb(3, 19, TB_WHITE, TB_DEFAULT, "Mouse event: %d x %d", ev->x, ev->y);
+	tb_printf(3, 19, TB_WHITE, TB_DEFAULT, "Mouse event: %d x %d", ev->x, ev->y);
 	char *btn = "";
 	switch (ev->key) {
 	case TB_KEY_MOUSE_LEFT:
@@ -648,10 +629,10 @@ void  pretty_print_mouse(struct tb_event *ev) {
 		btn = "MouseRelease: %d";
 	}
 	counter++;
-	printf_tb(43, 19, TB_WHITE, TB_DEFAULT, "Key: ");
-	printf_tb(48, 19, TB_YELLOW, TB_DEFAULT, btn, counter);
+	tb_printf(43, 19, TB_WHITE, TB_DEFAULT, "Key: ");
+	tb_printf(48, 19, TB_YELLOW, TB_DEFAULT, btn, counter);
 
-	printf_tb(43, 20, TB_WHITE, TB_DEFAULT, "Meta: %d ", ev->meta);
+	tb_printf(43, 20, TB_WHITE, TB_DEFAULT, "Meta: %d ", ev->meta);
 
 }
 
