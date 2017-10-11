@@ -37,17 +37,16 @@ int main(int argc, char **argv) {
   if (tb_init() != 0)
     return 1; // couldn't initialize our screen
 
-  // set up our colors and test string
+  // set up our colors
   int bg_color = TB_DEFAULT;
   int fg_color = TB_DEFAULT;
-  char str[20] = "Hello world!";
 
   // get the screen resolution
   int w = tb_width();
   int h = tb_height();
 
   // now, put some text in the middle of the screen
-  tb_print((w/2)-10, h/2, bg_color, fg_color, str);
+  tb_print((w/2)-10, h/2, bg_color, fg_color, "Hello world!");
 
   // flush the output to the screen
   tb_present();
@@ -68,12 +67,13 @@ Ok, now let's capture some input. Instead of the `sleep()` statement above, we c
 ...
 tb_present();
 
-// enable mouse input
+// set up a counter and enable mouse input
+int clicks = 0;
 tb_select_input_mode(TB_INPUT_MOUSE);
 
-// and listen for events
+// now, listen for events
 struct tb_event ev;
-while (tb_poll_event(&ev)) {
+while (tb_poll_event(&ev) != -1) {
   switch (ev.type) {
     case TB_EVENT_KEY:
       // we got a keyboard event. if the user hit the ESC
@@ -88,8 +88,9 @@ while (tb_poll_event(&ev)) {
       if (ev.key == TB_KEY_MOUSE_LEFT) {
         // increase the counter and show a message on screen, also
         // including the mouse coordinates at that point.
-        sprintf(str, "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
-        tb_print((w/2)-6, h/2, bg_color, fg_color, str);
+        tb_printf((w/2)-6, h/2, bg_color, fg_color,
+          "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
+
         tb_present();
       }
       break;

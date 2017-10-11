@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
@@ -299,6 +300,15 @@ int tb_print(int x, int y, uint32_t fg, uint32_t bg, char *str) {
   }
 
   return c;
+}
+
+int tb_printf(int x, int y, uint32_t fg, uint32_t bg, const char *fmt, ...) {
+	char buf[1024];
+	va_list vl;
+	va_start(vl, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, vl);
+	va_end(vl);
+	return tb_print(x, y, fg, bg, buf);
 }
 
 void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells) {
