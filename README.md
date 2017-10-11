@@ -16,6 +16,7 @@ First thing's first:
 Now run cmake to generate the Makefiles.
 
     mkdir build
+    cd build
     cmake ..
 
 And release the kraken:
@@ -25,29 +26,44 @@ And release the kraken:
 
 ## Usage
 
-Termbox's interface only consists of 12 functions:
+Termbox's has a very clean interface. Here's your basic 'hello world':
 
-    tb_init() // initialization
-    tb_shutdown() // shutdown
+    #include <unistd.h> // for sleep()
+    #include "termbox.h"
 
-    tb_width() // width of the terminal screen
-    tb_height() // height of the terminal screen
+    int main(int argc, char **argv) {
+      if (tb_init() != 0) {
+        return 1; // couldn't initialize our screen
+      }
 
-    tb_clear() // clear buffer
-    tb_present() // sync internal buffer with terminal
+      // set up our colors and test string
+      int bg_color = TB_DEFAULT;
+      int fg_color = TB_DEFAULT;
+      char str[13] = "Hello world!";
 
-    tb_put_cell()
-    tb_change_cell()
-    tb_blit() // drawing functions
+      // get the screen resolution
+      int w = tb_width();
+      int h = tb_height();
 
-    tb_select_input_mode() // change input mode
-    tb_peek_event() // peek a keyboard event
-    tb_poll_event() // wait for a keyboard event
+      // now, put some text in the middle of the screen
+      tb_print((w/2)-6, h/2, bg_color, fg_color, str);
 
-See src/termbox.h header file for more details.
+      // flush the output to the screen
+      tb_present();
+
+      // wait a few secs
+      sleep(3);
+
+      // and finally, shutdown the screen so we exit cleanly
+      tb_shutdown();
+
+      return 0;
+    }
+
 
 ## Links
 
+- https://github.com/nsf/termbox - Original version of this library
 - http://pecl.php.net/package/termbox - PHP Termbox wrapper
 - https://github.com/nsf/termbox-go - Go pure Termbox implementation
 - https://github.com/gchp/rustbox - Rust Termbox wrapper
