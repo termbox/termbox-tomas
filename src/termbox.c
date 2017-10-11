@@ -19,7 +19,6 @@
 #include <wchar.h>
 
 #include "termbox.h"
-
 #include "bytebuffer.inl"
 #include "term.inl"
 #include "input.inl"
@@ -80,8 +79,7 @@ static volatile int buffer_size_change_request;
 
 /* -------------------------------------------------------- */
 
-int tb_init_fd(int inout_)
-{
+int tb_init_fd(int inout_) {
 	inout = inout_;
 	if (inout == -1) {
 		return TB_EFAILED_TO_OPEN_TTY;
@@ -104,27 +102,17 @@ int tb_init_fd(int inout_)
 	sigaction(SIGWINCH, &sa, 0);
 
 	tcgetattr(inout, &orig_tios);
-
 	struct termios tios;
 	memcpy(&tios, &orig_tios, sizeof(tios));
 
-/*
-  tios.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-  tios.c_oflag &= ~(OPOST);
-  tios.c_cflag |= (CS8);
-  tios.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-  tios.c_cc[VMIN] = 0;  // Return each byte, or zero for timeout.
-  tios.c_cc[VTIME] = 1; // 100 ms timeout (unit is tens of second).
-*/
-
 	tios.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
-                           | INLCR | IGNCR | ICRNL | IXON);
+                           | INLCR | IGNCR | ICRNL | IXON); // INPCK
 	tios.c_oflag &= ~OPOST;
 	tios.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
 	tios.c_cflag &= ~(CSIZE | PARENB);
 	tios.c_cflag |= CS8;
-	tios.c_cc[VMIN] = 0;
-	tios.c_cc[VTIME] = 0;
+	tios.c_cc[VMIN] = 0;  // Return each byte, or zero for timeout.
+	tios.c_cc[VTIME] = 0; // 0ms timeout (unit is tens of second).
 
 	tcsetattr(inout, TCSAFLUSH, &tios);
 	return 0;
@@ -162,8 +150,7 @@ int tb_init(void) {
 	return tb_init_screen(1);
 }
 
-void tb_shutdown(int clear)
-{
+void tb_shutdown(int clear) {
 	if (termw == -1) {
 		fputs("tb_shutdown() should not be called twice.", stderr);
 		abort();
@@ -172,10 +159,12 @@ void tb_shutdown(int clear)
 	if (title_set) write_title("");
 	bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
 	bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
+
 	if (clear) {
 		bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
 		bytebuffer_puts(&output_buffer, funcs[T_EXIT_CA]);
 	}
+
 	bytebuffer_puts(&output_buffer, funcs[T_EXIT_KEYPAD]);
 	bytebuffer_puts(&output_buffer, funcs[T_EXIT_MOUSE]);
 	bytebuffer_flush(&output_buffer, inout);
@@ -193,8 +182,7 @@ void tb_shutdown(int clear)
 	termw = termh = -1;
 }
 
-void tb_present(void)
-{
+void tb_present(void) {
 	int x,y,w,i;
 	struct tb_cell *back, *front;
 
@@ -236,8 +224,10 @@ void tb_present(void)
 			x += w;
 		}
 	}
+
 	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
 		write_cursor(cursor_x, cursor_y);
+
 	bytebuffer_flush(&output_buffer, inout);
 }
 
@@ -245,8 +235,8 @@ void tb_puts(const char * str) {
 	bytebuffer_puts(&output_buffer, str); // same as append but without length
 	bytebuffer_flush(&output_buffer, inout);
 }
-void tb_set_cursor(int cx, int cy)
-{
+
+void tb_set_cursor(int cx, int cy) {
 	if (IS_CURSOR_HIDDEN(cursor_x, cursor_y) && !IS_CURSOR_HIDDEN(cx, cy))
 		bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
 
@@ -255,6 +245,7 @@ void tb_set_cursor(int cx, int cy)
 
 	cursor_x = cx;
 	cursor_y = cy;
+
 	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
 		write_cursor(cursor_x, cursor_y);
 }
@@ -264,17 +255,17 @@ void tb_set_title(const char * title) {
 	write_title(title);
 }
 
-void tb_put_cell(int x, int y, const struct tb_cell *cell)
-{
+void tb_put_cell(int x, int y, const struct tb_cell *cell) {
 	if ((unsigned)x >= (unsigned)back_buffer.width)
 		return;
+
 	if ((unsigned)y >= (unsigned)back_buffer.height)
 		return;
+
 	CELL(&back_buffer, x, y) = *cell;
 }
 
-void tb_change_cell(int x, int y, uint32_t ch, uint32_t fg, uint32_t bg)
-{
+void tb_change_cell(int x, int y, uint32_t ch, uint32_t fg, uint32_t bg) {
 	struct tb_cell c = {ch, fg, bg};
 	tb_put_cell(x, y, &c);
 }
@@ -294,8 +285,7 @@ int tb_print(int x, int y, uint32_t fg, uint32_t bg, char *str) {
   return c;
 }
 
-void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells)
-{
+void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells) {
 	if (x + w < 0 || x >= back_buffer.width)
 		return;
 	if (y + h < 0 || y >= back_buffer.height)
@@ -328,36 +318,30 @@ void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells)
 	}
 }
 
-struct tb_cell *tb_cell_buffer(void)
-{
+struct tb_cell *tb_cell_buffer(void) {
 	return back_buffer.cells;
 }
 
-int tb_poll_event(struct tb_event *event)
-{
+int tb_poll_event(struct tb_event *event) {
 	return wait_fill_event(event, 0);
 }
 
-int tb_peek_event(struct tb_event *event, int timeout)
-{
+int tb_peek_event(struct tb_event *event, int timeout) {
 	struct timeval tv;
 	tv.tv_sec = timeout / 1000;
 	tv.tv_usec = (timeout - (tv.tv_sec * 1000)) * 1000;
 	return wait_fill_event(event, &tv);
 }
 
-int tb_width(void)
-{
+int tb_width(void) {
 	return termw;
 }
 
-int tb_height(void)
-{
+int tb_height(void) {
 	return termh;
 }
 
-void tb_clear(void)
-{
+void tb_clear(void) {
 	if (buffer_size_change_request) {
 		tb_update_size();
 		buffer_size_change_request = 0;
@@ -369,8 +353,7 @@ void tb_clear_screen(void) {
 	return send_clear();
 }
 
-int tb_select_input_mode(int mode)
-{
+int tb_select_input_mode(int mode) {
 	if (mode) {
 		if ((mode & (TB_INPUT_ESC | TB_INPUT_ALT)) == 0)
 			mode |= TB_INPUT_ESC;
@@ -381,7 +364,7 @@ int tb_select_input_mode(int mode)
 			mode &= ~TB_INPUT_ALT;
 
 		inputmode = mode;
-		if (mode&TB_INPUT_MOUSE) {
+		if (mode & TB_INPUT_MOUSE) {
 			bytebuffer_puts(&output_buffer, funcs[T_ENTER_MOUSE]);
 			bytebuffer_flush(&output_buffer, inout);
 		} else {
@@ -392,28 +375,23 @@ int tb_select_input_mode(int mode)
 	return inputmode;
 }
 
-int tb_select_output_mode(int mode)
-{
-	if (mode)
-		outputmode = mode;
+int tb_select_output_mode(int mode) {
+	if (mode) outputmode = mode;
 	return outputmode;
 }
 
-void tb_set_clear_attributes(uint32_t fg, uint32_t bg)
-{
+void tb_set_clear_attributes(uint32_t fg, uint32_t bg) {
 	foreground = fg;
 	background = bg;
 }
 
-void tb_update_size(void)
-{
+void tb_update_size(void) {
 	update_term_size();
 	cellbuf_resize(&back_buffer, termw, termh);
 	cellbuf_resize(&front_buffer, termw, termh);
 	cellbuf_clear(&front_buffer);
 	send_clear();
 }
-
 
 /* -------------------------------------------------------- */
 
@@ -424,11 +402,13 @@ static int convertnum(uint32_t num, char* buf) {
 		buf[l++] = '0' + (num % 10);
 		num /= 10;
 	} while (num);
+
 	for(i = 0; i < l / 2; i++) {
 		ch = buf[i];
 		buf[i] = buf[l - 1 - i];
 		buf[l - 1 - i] = ch;
 	}
+
 	return l;
 }
 
@@ -506,16 +486,14 @@ static void write_title(const char * title) {
 	printf("%c]0;%s%c\n", '\033', title, '\007');
 }
 
-static void cellbuf_init(struct cellbuf *buf, int width, int height)
-{
+static void cellbuf_init(struct cellbuf *buf, int width, int height) {
 	buf->cells = (struct tb_cell*)malloc(sizeof(struct tb_cell) * width * height);
 	assert(buf->cells);
 	buf->width = width;
 	buf->height = height;
 }
 
-static void cellbuf_resize(struct cellbuf *buf, int width, int height)
-{
+static void cellbuf_resize(struct cellbuf *buf, int width, int height) {
 	if (buf->width == width && buf->height == height)
 		return;
 
@@ -539,8 +517,7 @@ static void cellbuf_resize(struct cellbuf *buf, int width, int height)
 	free(oldcells);
 }
 
-static void cellbuf_clear(struct cellbuf *buf)
-{
+static void cellbuf_clear(struct cellbuf *buf) {
 	int i;
 	int ncells = buf->width * buf->height;
 
@@ -551,13 +528,11 @@ static void cellbuf_clear(struct cellbuf *buf)
 	}
 }
 
-static void cellbuf_free(struct cellbuf *buf)
-{
+static void cellbuf_free(struct cellbuf *buf) {
 	free(buf->cells);
 }
 
-static void get_term_size(int *w, int *h)
-{
+static void get_term_size(int *w, int *h) {
 	struct winsize sz;
 	memset(&sz, 0, sizeof(sz));
 
@@ -567,8 +542,7 @@ static void get_term_size(int *w, int *h)
 	if (h) *h = sz.ws_row;
 }
 
-static void update_term_size(void)
-{
+static void update_term_size(void) {
 	struct winsize sz;
 	memset(&sz, 0, sizeof(sz));
 
@@ -578,8 +552,7 @@ static void update_term_size(void)
 	termh = sz.ws_row;
 }
 
-static void send_attr(uint32_t fg, uint32_t bg)
-{
+static void send_attr(uint32_t fg, uint32_t bg) {
 #define LAST_ATTR_INIT 0xFFFFFFFF
 	static uint32_t lastfg = LAST_ATTR_INIT, lastbg = LAST_ATTR_INIT;
 	if (fg != lastfg || bg != lastbg) {
@@ -635,23 +608,26 @@ static void send_attr(uint32_t fg, uint32_t bg)
 	}
 }
 
-static void send_char(int x, int y, uint32_t c)
-{
+static void send_char(int x, int y, uint32_t c) {
 	char buf[7];
 	int bw = tb_utf8_unicode_to_char(buf, c);
+
 	if (x-1 != lastx || y != lasty)
 		write_cursor(x, y);
+
 	lastx = x; lasty = y;
-	if(!c) buf[0] = ' '; // replace 0 with whitespace
+	if (!c) buf[0] = ' '; // replace 0 with whitespace
+
 	bytebuffer_append(&output_buffer, buf, bw);
 }
 
-static void send_clear(void)
-{
+static void send_clear(void) {
 	send_attr(foreground, background);
 	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
+
 	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
 		write_cursor(cursor_x, cursor_y);
+
 	bytebuffer_flush(&output_buffer, inout);
 
 	/* we need to invalidate cursor position too and these two vars are
@@ -663,8 +639,7 @@ static void send_clear(void)
 	lasty = LAST_COORD_INIT;
 }
 
-static void sigwinch_handler(int xxx)
-{
+static void sigwinch_handler(int xxx) {
 	(void) xxx;
 	const int zzz = 1;
 
@@ -672,11 +647,9 @@ static void sigwinch_handler(int xxx)
 	unused = write(winch_fds[1], &zzz, sizeof(int));
 }
 
-
-
-int maxseq = 14; // need to make room for urxvt mouse sequences
-int cutesc = 0;
-static char seq[14];
+#define MAXSEQ 14 // need to make room for urxvt mouse sequences
+static int cutesc = 0;
+static char seq[MAXSEQ];
 
 static int read_and_extract_event(struct tb_event * event) {
   int nread, rs;
@@ -696,13 +669,14 @@ static int read_and_extract_event(struct tb_event * event) {
 	event->ch   = 0;
 
 	if (c != 27 && 0 <= c && c <= 127) { // from ctrl-a to z, not esc
+
 		decode_char(event, c);
     return 1;
 
   } else { // either esc or unicode
 
     nread = 1;
-    while (nread < maxseq) {
+    while (nread < MAXSEQ) {
       rs = read(inout, seq + nread++, 1);
       if (rs == -1) return -1;
       if (rs == 0) break;
@@ -722,7 +696,7 @@ static int read_and_extract_event(struct tb_event * event) {
       }
     }
 
-    if (nread == maxseq) return 0;
+    if (nread == MAXSEQ) return 0;
     seq[nread] = '\0';
 
     if (c == 27) {
@@ -780,6 +754,5 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout) {
       if (n < 0) return -1;
       if (n > 0) return event->type;
     }
-
   }
 }

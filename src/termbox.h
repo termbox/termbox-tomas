@@ -220,8 +220,6 @@ SO_IMPORT void tb_set_clear_attributes(uint32_t fg, uint32_t bg);
 /* Synchronizes the internal back buffer with the terminal. */
 SO_IMPORT void tb_present(void);
 
-#define TB_HIDE_CURSOR -1
-
 SO_IMPORT void tb_set_title(const char * title);
 SO_IMPORT void tb_puts(const char * str);
 SO_IMPORT int tb_print(int x, int y, uint32_t fg, uint32_t bg, char * str);
@@ -230,6 +228,8 @@ SO_IMPORT int tb_print(int x, int y, uint32_t fg, uint32_t bg, char * str);
  * TB_HIDE_CURSOR as both coordinates, then the cursor will be hidden. Cursor
  * is hidden by default.
  */
+
+#define TB_HIDE_CURSOR -1
 SO_IMPORT void tb_set_cursor(int cx, int cy);
 
 /* Changes cell's parameters in the internal back buffer at the specified
