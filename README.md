@@ -116,6 +116,10 @@ For more information, take a look at [the demos](https://github.com/tomas/termbo
 
 Report bugs to the https://github.com/tomas/termbox issue tracker.
 
+## License
+
+MIT.
+
 ## Changelog
 
 v1.1.0:
