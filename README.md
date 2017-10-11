@@ -62,8 +62,8 @@ Termbox's has a very clean interface. Here's your basic 'hello world':
 
 Ok, now let's capture some input. Instead of the `sleep()` statement above, we could do this:
 
-    // ...
-    // tb_present();
+    ...
+    tb_present();
 
     // enable mouse input
     tb_select_input_mode(TB_INPUT_MOUSE);
