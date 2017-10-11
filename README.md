@@ -4,7 +4,7 @@ A small library for building text-based user interfaces. This is a fork of nsf's
 
  - Better input handling, so Ctrl/Alt/Shift key combos are property detected
  - Additional init options, (e.g. skip clearing full screen, cursor hiding, etc)
- - True color support (soon)
+ - True color support
 
 ## Installation
 
