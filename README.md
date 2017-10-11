@@ -29,76 +29,76 @@ And release the kraken:
 Termbox's has a very clean interface. Here's your basic 'hello world':
 
 ```c
-    #include <unistd.h> // for sleep()
-    #include "termbox.h"
+#include <unistd.h> // for sleep()
+#include "termbox.h"
 
-    int main(int argc, char **argv) {
-      if (tb_init() != 0) {
-        return 1; // couldn't initialize our screen
-      }
+int main(int argc, char **argv) {
+  if (tb_init() != 0) {
+    return 1; // couldn't initialize our screen
+  }
 
-      // set up our colors and test string
-      int bg_color = TB_DEFAULT;
-      int fg_color = TB_DEFAULT;
-      char str[20] = "Hello world!";
+  // set up our colors and test string
+  int bg_color = TB_DEFAULT;
+  int fg_color = TB_DEFAULT;
+  char str[20] = "Hello world!";
 
-      // get the screen resolution
-      int w = tb_width();
-      int h = tb_height();
+  // get the screen resolution
+  int w = tb_width();
+  int h = tb_height();
 
-      // now, put some text in the middle of the screen
-      tb_print((w/2)-6, h/2, bg_color, fg_color, str);
+  // now, put some text in the middle of the screen
+  tb_print((w/2)-6, h/2, bg_color, fg_color, str);
 
-      // flush the output to the screen
-      tb_present();
+  // flush the output to the screen
+  tb_present();
 
-      // wait a few secs
-      sleep(3);
+  // wait a few secs
+  sleep(3);
 
-      // and finally, shutdown the screen so we exit cleanly
-      tb_shutdown();
+  // and finally, shutdown the screen so we exit cleanly
+  tb_shutdown();
 
-      return 0;
-    }
+  return 0;
+}
 ```
 
 Ok, now let's capture some input. Instead of the `sleep()` statement above, we could do this:
 
 ```c
-    ...
-    tb_present();
+...
+tb_present();
 
-    // enable mouse input
-    tb_select_input_mode(TB_INPUT_MOUSE);
+// enable mouse input
+tb_select_input_mode(TB_INPUT_MOUSE);
 
-    // and listen for events
-    struct tb_event ev;
-    while (tb_poll_event(&ev)) {
-      switch (ev.type) {
-        case TB_EVENT_KEY:
-          // we got a keyboard event. if the user hit the ESC
-          // key or Ctrl-C, then exit the program
-          if (ev.key == TB_KEY_ESC || ev.key == TB_KEY_CTRL_C) {
-            goto done;
-          }
-          break;
-
-        case TB_EVENT_MOUSE:
-          // ok, looks like we got a mouse event
-          if (ev.key == TB_KEY_MOUSE_LEFT) {
-            // increase the counter and show a message on screen, also
-            // including the mouse coordinates at that point.
-            sprintf(str, "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
-            tb_print((w/2)-6, h/2, bg_color, fg_color, str);
-            tb_present();
-          }
-          break;
+// and listen for events
+struct tb_event ev;
+while (tb_poll_event(&ev)) {
+  switch (ev.type) {
+    case TB_EVENT_KEY:
+      // we got a keyboard event. if the user hit the ESC
+      // key or Ctrl-C, then exit the program
+      if (ev.key == TB_KEY_ESC || ev.key == TB_KEY_CTRL_C) {
+        goto done;
       }
-    }
+      break;
 
-    done: // shutdown logic
-    tb_shutdown();
-    ...
+    case TB_EVENT_MOUSE:
+      // ok, looks like we got a mouse event
+      if (ev.key == TB_KEY_MOUSE_LEFT) {
+        // increase the counter and show a message on screen, also
+        // including the mouse coordinates at that point.
+        sprintf(str, "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
+        tb_print((w/2)-6, h/2, bg_color, fg_color, str);
+        tb_present();
+      }
+      break;
+  }
+}
+
+done: // shutdown logic
+tb_shutdown();
+...
 ```
 
 For more information, take a look at [the demos](https://github.com/tomas/termbox/tree/master/demos) or check the [termbox.h](https://github.com/tomas/termbox/blob/master/src/termbox.h) header for the full termbox API.
