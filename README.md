@@ -34,9 +34,8 @@ Termbox's has a very clean interface. Here's your basic 'hello world':
 #include "termbox.h"
 
 int main(int argc, char **argv) {
-  if (tb_init() != 0) {
+  if (tb_init() != 0)
     return 1; // couldn't initialize our screen
-  }
 
   // set up our colors and test string
   int bg_color = TB_DEFAULT;
