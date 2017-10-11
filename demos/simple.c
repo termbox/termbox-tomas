@@ -1,6 +1,5 @@
 #include <unistd.h> // for sleep()
 #include <stdio.h>
-#include <string.h>
 #include "../src/termbox.h"
 
 int main(void) {
@@ -16,7 +15,7 @@ int main(void) {
   int w = tb_width();
   int h = tb_height();
 
-  tb_print((w/2)-6, h/2, bg_color, fg_color, "Click, click.");
+  tb_print((w/2)-6, h/2, bg_color, fg_color, "Hello click.");
   tb_present();
 
   int clicks = 0;
