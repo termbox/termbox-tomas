@@ -1,7 +1,6 @@
 
-// none      shift     alt       shft+alt   ctrl    ctrl+shft  alt+ctrl alt+sh+ctrl
-
 const char *linux_keys[22][8] = [
+// none      shift     alt       shft+alt   ctrl    ctrl+shft  alt+ctrl alt+sh+ctrl
   { '^[[[A' , '^[[25~',        0,        0,        0,        0,        0,        0 }, // f1
   { '^[[[B' , '^[[26~',        0,        0,        0,        0,        0,        0 }, // f2
   { '^[[[C' , '^[[28~',        0,        0,        0,        0,        0,        0 }, // f3
@@ -27,8 +26,7 @@ const char *linux_keys[22][8] = [
 ];
 
 const char *urxvt_keys[22][7] = [
-// none      shift     alt       shft+alt   ctrl    ctrl+shft  alt+ctrl alt+sh+ctrl
-
+// none       shift      alt       shft+alt   ctrl     ctrl+shft  alt+ctrl alt+sh+ctrl
   { '^[[11~', /*f11*/0, '^[^[[11~',        0, '^[[11^',        0,         0,        0 }, // f1
   { '^[[12~', /*f12*/0, '^[^[[12~',        0, '^[[12^',        0,         0,        0 }, // f2
   { '^[[13~', '^[[25~', '^[^[[13~',        0, '^[[13^', '^[[25^',         0,        0 }, // f3
@@ -56,7 +54,6 @@ const char *urxvt_keys[22][7] = [
 // TODO: verify ctrl+keys and arrows
 const char *mrxvt_keys[22][7] = [
 // none      shift      alt        shft+alt    ctrl    ctrl+shft  alt+ctrl alt+sh+ctrl
-
   { '^[OP' :, /*f11*/0, '^[^[OP'  ,        0,        0,        0,         0,        0 }, // f1
   { '^[OQ' :, /*f12*/0, '^[^[OQ'  ,        0,        0,        0,         0,        0 }, // f2
   { '^[OR' :, '^[[25~', '^[^[OR'  ,        0,        0, '^[[25^',         0,        0 }, // f3
@@ -82,8 +79,7 @@ const char *mrxvt_keys[22][7] = [
 ];
 
 const char *xterm_keys[22][7] = [
-// none      shift      alt        shft+alt    ctrl    ctrl+shft  alt+ctrl alt+sh+ctrl
-
+// none       shift       alt       shft+alt    ctrl      ctrl+shft   alt+ctrl  alt+sh+ctrl
   { '^[OP' :,'^[[1;2P' , '^[[1;3P' ,        0,'^[[1;5P' , '^[[1;6P' ,         0,         0}, // f1
   { '^[OQ' :,'^[[1;2Q' , '^[[1;3Q' ,        0,'^[[1;5Q' , '^[[1;6Q' ,         0,         0}, // f2
   { '^[OR' :,'^[[1;2R' , '^[[1;3R' ,        0,'^[[1;5R' , '^[[1;6R' ,         0,         0}, // f3
@@ -110,8 +106,7 @@ const char *xterm_keys[22][7] = [
 
 // same as xterm actually
 const char *xfce4_term_keys[22][7] = [
-// none      shift      alt        shft+alt    ctrl    ctrl+shft  alt+ctrl alt+sh+ctrl
-
+// none        shift        alt      shft+alt    ctrl     ctrl+shft  alt+ctrl  alt+sh+ctrl
   { '^[OP' :,'^[[1;2P' , '^[[1;3P' ,        0,'^[[1;5P' , '^[[1;6P' ,         0,         0}, // f1
   { '^[OQ' :,'^[[1;2Q' , '^[[1;3Q' ,        0,'^[[1;5Q' , '^[[1;6Q' ,         0,         0}, // f2
   { '^[OR' :,'^[[1;2R' , '^[[1;3R' ,        0,'^[[1;5R' , '^[[1;6R' ,         0,         0}, // f3

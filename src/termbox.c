@@ -155,7 +155,7 @@ int tb_init_file(const char* name) {
 	return tb_init_fd(open(name, O_RDWR));
 }
 
-int tb_init() {
+int tb_init(void) {
 	int res = tb_init_file("/dev/tty");
 	if (res != 0) return res;
 

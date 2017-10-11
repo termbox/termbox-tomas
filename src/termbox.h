@@ -224,7 +224,7 @@ SO_IMPORT void tb_present(void);
 
 SO_IMPORT void tb_set_title(const char * title);
 SO_IMPORT void tb_puts(const char * str);
-SO_IMPORT int tb_print(int x, int y, uint16_t fg, uint16_t bg, char * str);
+SO_IMPORT int tb_print(int x, int y, uint32_t fg, uint32_t bg, char * str);
 
 /* Sets the position of the cursor. Upper-left character is (0, 0). If you pass
  * TB_HIDE_CURSOR as both coordinates, then the cursor will be hidden. Cursor
