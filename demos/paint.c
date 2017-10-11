@@ -115,7 +115,7 @@ int main(void) {
 		int my = -1;
 		int t = tb_poll_event(&ev);
 		if (t == -1) {
-			tb_shutdown(1);
+			tb_shutdown();
 			fprintf(stderr, "termbox poll event error\n");
 			return -1;
 		}
@@ -123,7 +123,7 @@ int main(void) {
 		switch (t) {
 		case TB_EVENT_KEY:
 			if (ev.key == TB_KEY_ESC) {
-				tb_shutdown(1);
+				tb_shutdown();
 				return 0;
 			}
 			break;

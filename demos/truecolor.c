@@ -45,6 +45,6 @@ int main() {
 		}
 	}
 
-	tb_shutdown(1);
+	tb_shutdown();
 	return 0;
 }

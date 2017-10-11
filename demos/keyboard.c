@@ -708,11 +708,11 @@ int main(int argc, char **argv)
 		switch (ev.type) {
 		case TB_EVENT_KEY:
 			if (ev.key == TB_KEY_CTRL_Q && ctrlxpressed) {
-				tb_shutdown(1);
+				tb_shutdown();
 				return 0;
 			}
 			if (ev.key == TB_KEY_CTRL_C) {
-				tb_shutdown(1);
+				tb_shutdown();
 				return 0;
 			}
 
@@ -756,6 +756,6 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
-	tb_shutdown(1);
+	tb_shutdown();
 	return 0;
 }

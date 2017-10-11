@@ -40,6 +40,8 @@ static struct cellbuf front_buffer;
 static struct bytebuffer output_buffer;
 static struct bytebuffer input_buffer;
 
+static int initflags = TB_INIT_EVERYTHING;
+
 static int termw = -1;
 static int termh = -1;
 
@@ -118,14 +120,19 @@ int tb_init_fd(int inout_) {
 	return 0;
 }
 
-int tb_init_screen(int clear) {
+int tb_init_screen(int flags) {
 	bytebuffer_init(&input_buffer, 128);
 	bytebuffer_init(&output_buffer, 32 * 1024);
 
-	bytebuffer_puts(&output_buffer, funcs[T_ENTER_KEYPAD]);
-	// bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
+	initflags = flags;
 
-	if (clear) {
+	if (initflags & TB_INIT_KEYPAD)
+		bytebuffer_puts(&output_buffer, funcs[T_ENTER_KEYPAD]);
+
+	if (initflags & TB_HIDE_CURSOR)
+		bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
+
+	if (initflags & TB_INIT_ALTSCREEN) {
 		bytebuffer_puts(&output_buffer, funcs[T_ENTER_CA]);
 		send_clear();
 	}
@@ -143,14 +150,21 @@ int tb_init_file(const char* name) {
 	return tb_init_fd(open(name, O_RDWR));
 }
 
+int tb_init_with(int flags) {
+	int res = tb_init_file("/dev/tty");
+	if (res != 0) return res;
+
+	return tb_init_screen(flags);
+}
+
 int tb_init(void) {
 	int res = tb_init_file("/dev/tty");
 	if (res != 0) return res;
 
-	return tb_init_screen(1);
+	return tb_init_screen(TB_INIT_EVERYTHING);
 }
 
-void tb_shutdown(int clear) {
+void tb_shutdown(void) {
 	if (termw == -1) {
 		fputs("tb_shutdown() should not be called twice.", stderr);
 		abort();
@@ -160,12 +174,14 @@ void tb_shutdown(int clear) {
 	bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
 	bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
 
-	if (clear) {
-		bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
-		bytebuffer_puts(&output_buffer, funcs[T_EXIT_CA]);
+	if (initflags & TB_INIT_ALTSCREEN) {
+	  bytebuffer_puts(&output_buffer, funcs[T_EXIT_CA]);
+    bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
 	}
 
-	bytebuffer_puts(&output_buffer, funcs[T_EXIT_KEYPAD]);
+	if (initflags & TB_INIT_KEYPAD)
+		bytebuffer_puts(&output_buffer, funcs[T_EXIT_KEYPAD]);
+
 	bytebuffer_puts(&output_buffer, funcs[T_EXIT_MOUSE]);
 	bytebuffer_flush(&output_buffer, inout);
 	tcsetattr(inout, TCSAFLUSH, &orig_tios);

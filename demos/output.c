@@ -111,6 +111,6 @@ int main(int argc, char **argv) {
 		}
 	}
 done:
-	tb_shutdown(1);
+	tb_shutdown();
 	return 0;
 }
