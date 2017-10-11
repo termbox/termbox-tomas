@@ -104,7 +104,7 @@ int main(void) {
 		return -1;
 	}
 
-	tb_select_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+	tb_enable_mouse();
 	int w = tb_width();
 	int h = tb_height();
 	reallocBackBuffer(w, h);

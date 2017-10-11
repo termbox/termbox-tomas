@@ -69,7 +69,7 @@ tb_present();
 
 // set up a counter and enable mouse input
 int clicks = 0;
-tb_select_input_mode(TB_INPUT_MOUSE);
+tb_enable_mouse();
 
 // now, listen for events
 struct tb_event ev;

@@ -41,13 +41,11 @@ static struct cellbuf front_buffer;
 static struct bytebuffer output_buffer;
 static struct bytebuffer input_buffer;
 
-static int initflags = TB_INIT_EVERYTHING;
-
 static int termw = -1;
 static int termh = -1;
 
 static bool title_set = false;
-static int inputmode  = TB_INPUT_ESC;
+static int initflags = TB_INIT_EVERYTHING;
 static int outputmode = TB_OUTPUT_NORMAL;
 
 static int inout;
@@ -379,26 +377,14 @@ void tb_clear_screen(void) {
 	return send_clear();
 }
 
-int tb_select_input_mode(int mode) {
-	if (mode) {
-		if ((mode & (TB_INPUT_ESC | TB_INPUT_ALT)) == 0)
-			mode |= TB_INPUT_ESC;
+void tb_enable_mouse(void) {
+	bytebuffer_puts(&output_buffer, funcs[T_ENTER_MOUSE]);
+	bytebuffer_flush(&output_buffer, inout);
+}
 
-		/* technically termbox can handle that, but let's be nice and show here
-		   what mode is actually used */
-		if ((mode & (TB_INPUT_ESC | TB_INPUT_ALT)) == (TB_INPUT_ESC | TB_INPUT_ALT))
-			mode &= ~TB_INPUT_ALT;
-
-		inputmode = mode;
-		if (mode & TB_INPUT_MOUSE) {
-			bytebuffer_puts(&output_buffer, funcs[T_ENTER_MOUSE]);
-			bytebuffer_flush(&output_buffer, inout);
-		} else {
-			bytebuffer_puts(&output_buffer, funcs[T_EXIT_MOUSE]);
-			bytebuffer_flush(&output_buffer, inout);
-		}
-	}
-	return inputmode;
+void tb_disable_mouse(void) {
+	bytebuffer_puts(&output_buffer, funcs[T_EXIT_MOUSE]);
+	bytebuffer_flush(&output_buffer, inout);
 }
 
 int tb_select_output_mode(int mode) {

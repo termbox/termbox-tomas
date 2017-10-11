@@ -493,19 +493,6 @@ void draw_keyboard()
 	tb_print(33, 1, TB_MAGENTA | TB_BOLD, TB_DEFAULT, "Keyboard demo!");
 	tb_print(21, 2, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+Q to exit)");
 	tb_print(15, 3, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+C to change input mode)");
-
-	int inputmode = tb_select_input_mode(0);
-	char inputmode_str[64];
-
-	if (inputmode & TB_INPUT_ESC)
-		sprintf(inputmode_str, "TB_INPUT_ESC");
-	if (inputmode & TB_INPUT_ALT)
-		sprintf(inputmode_str, "TB_INPUT_ALT");
-
-	if (inputmode & TB_INPUT_MOUSE)
-		sprintf(inputmode_str, "%s | TB_INPUT_MOUSE", inputmode_str);
-
-	tb_printf(3, 18, TB_WHITE, TB_DEFAULT, "Input mode: %s", inputmode_str);
 }
 
 const char *funckeymap(int k)
@@ -673,14 +660,12 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	tb_select_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
-	// tb_select_input_mode(TB_INPUT_ESC);
+	tb_enable_mouse();
 	struct tb_event ev;
 
 	tb_clear();
 	draw_keyboard();
 	tb_present();
-	int inputmode = 0;
 	int ctrlxpressed = 0;
 
 	tb_set_title("Keyboard demo");
@@ -697,19 +682,6 @@ int main(int argc, char **argv)
 				return 0;
 			}
 
-			if (ev.key == TB_KEY_BACKSPACE && ev.meta == TB_META_ALT) {
-				static int chmap[] = {
-					TB_INPUT_ESC | TB_INPUT_MOUSE, /* 101 */
-					TB_INPUT_ALT | TB_INPUT_MOUSE, /* 110 */
-					TB_INPUT_ESC,                  /* 001 */
-					TB_INPUT_ALT,                  /* 010 */
-				};
-				inputmode++;
-				if (inputmode >= 4) {
-					inputmode = 0;
-				}
-				tb_select_input_mode(chmap[inputmode]);
-			}
 			if (ev.key == TB_KEY_CTRL_X)
 				ctrlxpressed = 1;
 			else

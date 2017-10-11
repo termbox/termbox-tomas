@@ -123,8 +123,10 @@ enum {
  * Alt modifier constant, see tb_event.mod field and tb_select_input_mode function.
  * Mouse-motion modifier
  */
-#define TB_MOD_ALT    0x01
-#define TB_MOD_MOTION 0x02
+
+// we're not using these currently.
+// #define TB_MOD_ALT    0x01
+// #define TB_MOD_MOTION 0x02
 
 /* Colors (see struct tb_cell's fg and bg fields). */
 #define TB_DEFAULT 0x00
@@ -261,30 +263,8 @@ SO_IMPORT void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells);
  */
 SO_IMPORT struct tb_cell *tb_cell_buffer(void);
 
-#define TB_INPUT_CURRENT 0 /* 000 */
-#define TB_INPUT_ESC     1 /* 001 */
-#define TB_INPUT_ALT     2 /* 010 */
-#define TB_INPUT_MOUSE   4 /* 100 */
-
-/* Sets the termbox input mode. Termbox has two input modes:
- * 1. Esc input mode.
- *    When ESC sequence is in the buffer and it doesn't match any known
- *    ESC sequence => ESC means TB_KEY_ESC.
- * 2. Alt input mode.
- *    When ESC sequence is in the buffer and it doesn't match any known
- *    sequence => ESC enables TB_MOD_ALT modifier for the next keyboard event.
- *
- * You can also apply TB_INPUT_MOUSE via bitwise OR operation to either of the
- * modes (e.g. TB_INPUT_ESC | TB_INPUT_MOUSE). If none of the main two modes
- * were set, but the mouse mode was, TB_INPUT_ESC mode is used. If for some
- * reason you've decided to use (TB_INPUT_ESC | TB_INPUT_ALT) combination, it
- * will behave as if only TB_INPUT_ESC was selected.
- *
- * If 'mode' is TB_INPUT_CURRENT, it returns the current input mode.
- *
- * Default termbox input mode is TB_INPUT_ESC.
- */
-SO_IMPORT int tb_select_input_mode(int mode);
+SO_IMPORT void tb_enable_mouse(void);
+SO_IMPORT void tb_disable_mouse(void);
 
 #define TB_OUTPUT_CURRENT   0
 #define TB_OUTPUT_NORMAL    1

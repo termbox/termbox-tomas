@@ -18,7 +18,7 @@ int main(void) {
   tb_present();
 
   int clicks = 0;
-  tb_select_input_mode(TB_INPUT_MOUSE);
+  tb_enable_mouse();
 
   // now, wait for keyboard or input
   struct tb_event ev;
