@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "../termbox.h"
+#include "../src/termbox.h"
 
 static const char chars[] = "nnnnnnnnnbbbbbbbbbuuuuuuuuuBBBBBBBBB";
 
@@ -111,6 +111,6 @@ int main(int argc, char **argv) {
 		}
 	}
 done:
-	tb_shutdown();
+	tb_shutdown(1);
 	return 0;
 }

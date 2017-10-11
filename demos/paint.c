@@ -1,7 +1,7 @@
-#include "../termbox.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "../src/termbox.h"
 
 static int curCol = 0;
 static int curRune = 0;
@@ -115,7 +115,7 @@ int main(void) {
 		int my = -1;
 		int t = tb_poll_event(&ev);
 		if (t == -1) {
-			tb_shutdown();
+			tb_shutdown(1);
 			fprintf(stderr, "termbox poll event error\n");
 			return -1;
 		}
@@ -123,7 +123,7 @@ int main(void) {
 		switch (t) {
 		case TB_EVENT_KEY:
 			if (ev.key == TB_KEY_ESC) {
-				tb_shutdown();
+				tb_shutdown(1);
 				return 0;
 			}
 			break;

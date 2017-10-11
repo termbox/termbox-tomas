@@ -1,5 +1,4 @@
-#include "../termbox.h"
-
+#include "../src/termbox.h"
 
 int main() {
 	tb_init();
@@ -46,6 +45,6 @@ int main() {
 		}
 	}
 
-	tb_shutdown();
+	tb_shutdown(1);
 	return 0;
 }

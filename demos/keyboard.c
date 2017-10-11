@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include "../termbox.h"
+#include "../src/termbox.h"
 
 struct key {
 	unsigned char x;
@@ -708,11 +708,11 @@ int main(int argc, char **argv)
 		switch (ev.type) {
 		case TB_EVENT_KEY:
 			if (ev.key == TB_KEY_CTRL_Q && ctrlxpressed) {
-				tb_shutdown();
+				tb_shutdown(1);
 				return 0;
 			}
 			if (ev.key == TB_KEY_CTRL_C) {
-				tb_shutdown();
+				tb_shutdown(1);
 				return 0;
 			}
 
@@ -756,6 +756,6 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
-	tb_shutdown();
+	tb_shutdown(1);
 	return 0;
 }
