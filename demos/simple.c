@@ -1,5 +1,4 @@
 #include <unistd.h> // for sleep()
-#include <stdio.h>
 #include "../src/termbox.h"
 
 int main(void) {
