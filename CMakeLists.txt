@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(libtermbox C)
 
+option(WITH_TRUECOLOR "Enable true-color support" 0)
+
 include(cmake/add_cflag_if_supported.cmake)
 
 add_cflag_if_supported("-std=gnu99")
@@ -55,6 +57,7 @@ set_target_properties(${PROJECT_NAME}-shared PROPERTIES OUTPUT_NAME ${PROJECT_NA
 
 file(GLOB DEMOS demos/*.c)
 foreach(DEMO ${DEMOS})
+	MESSAGE("----> Adding demo ${DEMO}")
 	get_filename_component(DEMOEXE ${DEMO} NAME_WE)
 	add_executable(${DEMOEXE} ${DEMO})
 	add_dependencies(${DEMOEXE} ${PROJECT_NAME}-static)

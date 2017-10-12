@@ -8,7 +8,7 @@ static int curRune = 0;
 static struct tb_cell *backbuf;
 static int bbw = 0, bbh = 0;
 
-static const uint32_t runes[] = {
+static const tb_color runes[] = {
 	0x20, // ' '
 	0x2591, // '░'
 	0x2592, // '▒'
@@ -18,7 +18,7 @@ static const uint32_t runes[] = {
 
 #define len(a) (sizeof(a)/sizeof(a[0]))
 
-static const uint32_t colors[] = {
+static const tb_color colors[] = {
 	TB_BLACK,
 	TB_RED,
 	TB_GREEN,
@@ -29,15 +29,15 @@ static const uint32_t colors[] = {
 	TB_WHITE,
 };
 
-void updateAndDrawButtons(int *current, int x, int y, int mx, int my, int n, void (*attrFunc)(int, uint32_t*, uint32_t*, uint32_t*)) {
+void updateAndDrawButtons(int *current, int x, int y, int mx, int my, int n, void (*attrFunc)(int, tb_color*, tb_color*, tb_color*)) {
 	int lx = x;
 	int ly = y;
 	for (int i = 0; i < n; i++) {
 		if (lx <= mx && mx <= lx+3 && ly <= my && my <= ly+1) {
 			*current = i;
 		}
-		uint32_t r;
-		uint32_t fg, bg;
+		tb_color r;
+		tb_color fg, bg;
 		(*attrFunc)(i, &r, &fg, &bg);
                 tb_change_cell(lx+0, ly+0, r, fg, bg);
                 tb_change_cell(lx+1, ly+0, r, fg, bg);
@@ -53,8 +53,8 @@ void updateAndDrawButtons(int *current, int x, int y, int mx, int my, int n, voi
 	ly = y;
         for (int i = 0; i < n; i++) {
                 if (*current == i) {
-                        uint32_t fg = TB_RED | TB_BOLD;
-                        uint32_t bg = TB_DEFAULT;
+                        tb_color fg = TB_RED | TB_BOLD;
+                        tb_color bg = TB_DEFAULT;
                         tb_change_cell(lx+0, ly+2, '^', fg, bg);
                         tb_change_cell(lx+1, ly+2, '^', fg, bg);
                         tb_change_cell(lx+2, ly+2, '^', fg, bg);
@@ -64,13 +64,13 @@ void updateAndDrawButtons(int *current, int x, int y, int mx, int my, int n, voi
         }
 }
 
-void runeAttrFunc(int i, uint32_t *r, uint32_t *fg, uint32_t *bg) {
+void runeAttrFunc(int i, tb_color *r, tb_color *fg, tb_color *bg) {
 	*r = runes[i];
 	*fg = TB_DEFAULT;
 	*bg = TB_DEFAULT;
 }
 
-void colorAttrFunc(int i, uint32_t *r, uint32_t *fg, uint32_t *bg) {
+void colorAttrFunc(int i, tb_color *r, tb_color *fg, tb_color *bg) {
 	*r = ' ';
 	*fg = TB_DEFAULT;
 	*bg = colors[i];

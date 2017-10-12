@@ -13,6 +13,14 @@
 extern "C" {
 #endif
 
+#ifdef WITH_TRUECOLOR
+typedef uint32_t tb_color;
+#define LAST_ATTR_INIT 0xFFFFFFFF
+#else
+typedef uint16_t tb_color;
+#define LAST_ATTR_INIT 0xFFF
+#endif
+
 /* Key constants. See also struct tb_event's key field.
  *
  * These are a safe subset of terminfo keys, which exist on all popular
@@ -144,9 +152,16 @@ enum {
  * combine attributes and a single color. See also struct tb_cell's fg and bg
  * fields.
  */
+
+#ifdef WITH_TRUECOLOR
 #define TB_BOLD      0x01000000
 #define TB_UNDERLINE 0x02000000
 #define TB_REVERSE   0x04000000
+#else
+#define TB_BOLD      0x0100
+#define TB_UNDERLINE 0x0200
+#define TB_REVERSE   0x0400
+#endif
 
 /* A cell, single conceptual entity on the terminal screen. The terminal screen
  * is basically a 2d array of cells. It has the following fields:
@@ -156,8 +171,8 @@ enum {
  */
 struct tb_cell {
 	uint32_t ch;
-	uint32_t fg;
-	uint32_t bg;
+	tb_color fg;
+	tb_color bg;
 };
 
 #define TB_EVENT_KEY    1
@@ -224,15 +239,15 @@ SO_IMPORT int tb_height(void);
  */
 SO_IMPORT void tb_clear(void);
 SO_IMPORT void tb_clear_screen(void);
-SO_IMPORT void tb_set_clear_attributes(uint32_t fg, uint32_t bg);
+SO_IMPORT void tb_set_clear_attributes(tb_color fg, tb_color bg);
 
 /* Synchronizes the internal back buffer with the terminal. */
 SO_IMPORT void tb_present(void);
 
 SO_IMPORT void tb_set_title(const char * title);
 SO_IMPORT void tb_puts(const char * str);
-SO_IMPORT int tb_print(int x, int y, uint32_t fg, uint32_t bg, char * str);
-SO_IMPORT int tb_printf(int x, int y, uint32_t fg, uint32_t bg, const char * fmt, ...);
+SO_IMPORT int tb_print(int x, int y, tb_color fg, tb_color bg, char * str);
+SO_IMPORT int tb_printf(int x, int y, tb_color fg, tb_color bg, const char * fmt, ...);
 
 /* Sets the position of the cursor. Upper-left character is (0, 0). If you pass
  * TB_HIDE_CURSOR as both coordinates, then the cursor will be hidden. Cursor
@@ -246,7 +261,7 @@ SO_IMPORT void tb_set_cursor(int cx, int cy);
  * position.
  */
 SO_IMPORT void tb_put_cell(int x, int y, const struct tb_cell *cell);
-SO_IMPORT void tb_change_cell(int x, int y, uint32_t ch, uint32_t fg, uint32_t bg);
+SO_IMPORT void tb_change_cell(int x, int y, uint32_t ch, tb_color fg, tb_color bg);
 
 /* Copies the buffer from 'cells' at the specified position, assuming the
  * buffer is a two-dimensional array of size ('w' x 'h'), represented as a
@@ -271,7 +286,9 @@ SO_IMPORT void tb_disable_mouse(void);
 #define TB_OUTPUT_256       2
 #define TB_OUTPUT_216       3
 #define TB_OUTPUT_GRAYSCALE 4
+#ifdef WITH_TRUECOLOR
 #define TB_OUTPUT_TRUECOLOR 5
+#endif
 
 /* Sets the termbox output mode. Termbox has three output options:
  * 1. TB_OUTPUT_NORMAL     => [1..8]

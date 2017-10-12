@@ -7,7 +7,7 @@
 struct key {
 	unsigned char x;
 	unsigned char y;
-	uint32_t ch;
+	tb_color ch;
 };
 
 #define STOP {0,0,0}
@@ -342,7 +342,7 @@ struct combo func_combos[] = {
 };
 
 
-void draw_key(struct key *k, uint32_t fg, uint32_t bg)
+void draw_key(struct key *k, tb_color fg, tb_color bg)
 {
 	while (k->x) {
 		tb_change_cell(k->x+2, k->y+4, k->ch, fg, bg);

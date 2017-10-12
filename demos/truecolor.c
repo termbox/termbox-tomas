@@ -1,11 +1,14 @@
+#include <stdio.h>
 #include "../src/termbox.h"
 
 int main() {
+#ifdef WITH_TRUECOLOR
 	tb_init();
 	tb_select_output_mode(TB_OUTPUT_TRUECOLOR);
+
 	int w = tb_width();
 	int h = tb_height();
-	uint32_t bg = 0x000000, fg = 0x000000;
+	tb_color bg = 0x000000, fg = 0x000000;
 
 	tb_clear();
 	int z = 0;
@@ -47,4 +50,8 @@ int main() {
 
 	tb_shutdown();
 	return 0;
+#else
+	printf("True color support not enabled. Please recompile with WITH_TRUECOLOR option.\n");
+	return 1;
+#endif
 }
