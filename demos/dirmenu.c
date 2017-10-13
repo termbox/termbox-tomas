@@ -23,6 +23,10 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+#include <errno.h>  // for ENOMEM
+#include <stdint.h> // for SIZE_MAX
+#include <stdlib.h> // for realloc
+
 #ifdef FUZZY_SEARCH
 #include "lib/filter.h"
 #endif
@@ -145,7 +149,7 @@ void tb_menu_redraw(int lines) {
       continue;
     }
 
-    if (i == selected) tb_sendf("\033[7m"); // reverse
+    if (i == selected) tb_send("\033[7m"); // reverse
 
 #ifdef FUZZY_SEARCH
     uint8_t col = 0;
