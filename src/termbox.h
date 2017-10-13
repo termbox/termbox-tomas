@@ -245,7 +245,7 @@ SO_IMPORT void tb_set_clear_attributes(tb_color fg, tb_color bg);
 SO_IMPORT void tb_present(void);
 
 SO_IMPORT void tb_set_title(const char * title);
-SO_IMPORT void tb_puts(const char * str);
+SO_IMPORT void tb_puts(const char * str, int flush);
 SO_IMPORT int tb_print(int x, int y, tb_color fg, tb_color bg, char * str);
 SO_IMPORT int tb_printf(int x, int y, tb_color fg, tb_color bg, const char * fmt, ...);
 

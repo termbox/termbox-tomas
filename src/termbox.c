@@ -247,9 +247,9 @@ void tb_present(void) {
 	bytebuffer_flush(&output_buffer, inout);
 }
 
-void tb_puts(const char * str) {
+void tb_puts(const char * str, int flush) {
 	bytebuffer_puts(&output_buffer, str); // same as append but without length
-	bytebuffer_flush(&output_buffer, inout);
+	if (flush) bytebuffer_flush(&output_buffer, inout);
 }
 
 void tb_set_cursor(int cx, int cy) {
