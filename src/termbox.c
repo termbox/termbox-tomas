@@ -166,8 +166,8 @@ int tb_init(void) {
 
 void tb_shutdown(void) {
 	if (termw == -1) {
-		fputs("tb_shutdown() should not be called twice.", stderr);
-		abort();
+		fputs("term not initialized.", stderr);
+		return;
 	}
 
 	if (title_set) write_title("");
