@@ -62,6 +62,9 @@ foreach(DEMO ${DEMOS})
 	add_executable(${DEMOEXE} ${DEMO})
 	add_dependencies(${DEMOEXE} ${PROJECT_NAME}-static)
 	target_link_libraries(${DEMOEXE} ${PROJECT_NAME}-static)
+	if(${DEMO} MATCHES "dirmenu.c") # this demo requires pthread
+		target_link_libraries(${DEMOEXE} pthread)
+	endif()
 endforeach()
 
 install(TARGETS ${PROJECT_NAME}-static ${PROJECT_NAME}-shared
