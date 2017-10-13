@@ -71,7 +71,6 @@ static void cellbuf_free(struct cellbuf *buf);
 static void update_term_size(void);
 static void send_attr(tb_color fg, tb_color bg);
 static void send_char(int x, int y, uint32_t c);
-static void send_clear(void);
 static void sigwinch_handler(int xxx);
 static int wait_fill_event(struct tb_event *event, struct timeval *timeout);
 
@@ -133,7 +132,7 @@ int tb_init_screen(int flags) {
 
 	if (initflags & TB_INIT_ALTSCREEN) {
 		bytebuffer_puts(&output_buffer, funcs[T_ENTER_CA]);
-		send_clear(); // flushes output
+		tb_clear_screen(); // flushes output
 	} else {
 		bytebuffer_flush(&output_buffer, inout);
 	}
@@ -376,7 +375,21 @@ void tb_clear(void) {
 }
 
 void tb_clear_screen(void) {
-	send_clear();
+	send_attr(foreground, background);
+	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
+
+	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
+		write_cursor(cursor_x, cursor_y);
+
+	bytebuffer_flush(&output_buffer, inout);
+
+	/* we need to invalidate cursor position too and these two vars are
+	 * used only for simple cursor positioning optimization, cursor
+	 * actually may be in the correct place, but we simply discard
+	 * optimization once and it gives us simple solution for the case when
+	 * cursor moved */
+	lastx = LAST_COORD_INIT;
+	lasty = LAST_COORD_INIT;
 }
 
 void tb_enable_mouse(void) {
@@ -552,7 +565,6 @@ static void cellbuf_free(struct cellbuf *buf) {
 static void get_term_size(int *w, int *h) {
 	struct winsize sz;
 	memset(&sz, 0, sizeof(sz));
-
 	ioctl(inout, TIOCGWINSZ, &sz);
 
 	if (w) *w = sz.ws_col;
@@ -639,24 +651,6 @@ static void send_char(int x, int y, uint32_t c) {
 	if (!c) buf[0] = ' '; // replace 0 with whitespace
 
 	bytebuffer_append(&output_buffer, buf, bw);
-}
-
-static void send_clear(void) {
-	send_attr(foreground, background);
-	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
-
-	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
-		write_cursor(cursor_x, cursor_y);
-
-	bytebuffer_flush(&output_buffer, inout);
-
-	/* we need to invalidate cursor position too and these two vars are
-	 * used only for simple cursor positioning optimization, cursor
-	 * actually may be in the correct place, but we simply discard
-	 * optimization once and it gives us simple solution for the case when
-	 * cursor moved */
-	lastx = LAST_COORD_INIT;
-	lasty = LAST_COORD_INIT;
 }
 
 static void sigwinch_handler(int xxx) {
