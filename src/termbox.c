@@ -382,6 +382,7 @@ void tb_resize(void) {
 	} else {
 		update_term_size();
 	}
+
 	cellbuf_resize(&back_buffer, termw, termh);
 	cellbuf_resize(&front_buffer, termw, termh);
 	cellbuf_clear(&front_buffer);
