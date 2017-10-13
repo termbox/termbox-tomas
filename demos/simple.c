@@ -26,10 +26,8 @@ int main(void) {
   while (tb_poll_event(&ev) != -1) {
     switch (ev.type) {
     case TB_EVENT_RESIZE:
-      tb_clear();
-      w = tb_width();
-      h = tb_height();
-      tb_printf((w/2)-10, h/2, bg_color, fg_color, "Window resized to: %dx%d", w, h);
+      tb_resize();
+      tb_printf((w/2)-10, h/2, bg_color, fg_color, "Window resized to: %dx%d", ev.w, ev.h);
       break;
 
     case TB_EVENT_KEY:

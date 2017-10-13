@@ -9,8 +9,6 @@ int main() {
 	int w = tb_width();
 	int h = tb_height();
 	tb_color bg = 0x000000, fg = 0x000000;
-
-	tb_clear();
 	int z = 0;
 
 	for (int y = 1; y < h; y++) {

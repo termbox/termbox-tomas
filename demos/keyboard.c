@@ -663,7 +663,6 @@ int main(int argc, char **argv)
 	tb_enable_mouse();
 	struct tb_event ev;
 
-	tb_clear();
 	draw_keyboard();
 	tb_present();
 	int ctrlxpressed = 0;
@@ -687,28 +686,26 @@ int main(int argc, char **argv)
 			else
 				ctrlxpressed = 0;
 
-			// tb_clear();
 			draw_keyboard();
 			dispatch_press(&ev);
 			pretty_print_press(&ev);
-			tb_present();
 			break;
 		case TB_EVENT_RESIZE:
-			tb_clear();
+			tb_resize();
 			draw_keyboard();
 			pretty_print_resize(&ev);
-			tb_present();
 			break;
 		case TB_EVENT_MOUSE:
-			// tb_clear();
 			draw_keyboard();
 			pretty_print_mouse(&ev);
-			tb_present();
 			break;
 		default:
 			break;
 		}
+
+		tb_present();
 	}
+
 	tb_shutdown();
 	return 0;
 }

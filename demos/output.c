@@ -43,11 +43,12 @@ static void print_combinations_table(int sx, int sy, const tb_color *attrs, int 
 }
 
 static void draw_all() {
-	tb_clear();
-
+	tb_resize();
 	tb_select_output_mode(TB_OUTPUT_NORMAL);
+
 	static const tb_color col1[] = {0, TB_BOLD};
 	static const tb_color col2[] = {TB_REVERSE};
+
 	print_combinations_table(1, 1, col1, 2);
 	print_combinations_table(2 + strlen(chars), 1, col2, 1);
 	tb_present();

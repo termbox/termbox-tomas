@@ -206,10 +206,8 @@ void tb_present(void) {
 	lastx = LAST_COORD_INIT;
 	lasty = LAST_COORD_INIT;
 
-	if (buffer_size_change_request) {
-		tb_update_size();
-		buffer_size_change_request = 0;
-	}
+	if (buffer_size_change_request)
+		tb_resize();
 
 	for (y = 0; y < front_buffer.height; ++y) {
 		for (x = 0; x < front_buffer.width; ) {
@@ -310,39 +308,6 @@ int tb_printf(int x, int y, tb_color fg, tb_color bg, const char *fmt, ...) {
 	return tb_print(x, y, fg, bg, buf);
 }
 
-void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells) {
-	if (x + w < 0 || x >= back_buffer.width)
-		return;
-	if (y + h < 0 || y >= back_buffer.height)
-		return;
-	int xo = 0, yo = 0, ww = w, hh = h;
-	if (x < 0) {
-		xo = -x;
-		ww -= xo;
-		x = 0;
-	}
-	if (y < 0) {
-		yo = -y;
-		hh -= yo;
-		y = 0;
-	}
-	if (ww > back_buffer.width - x)
-		ww = back_buffer.width - x;
-	if (hh > back_buffer.height - y)
-		hh = back_buffer.height - y;
-
-	int sy;
-	struct tb_cell *dst = &CELL(&back_buffer, x, y);
-	const struct tb_cell *src = cells + yo * w + xo;
-	size_t size = sizeof(struct tb_cell) * ww;
-
-	for (sy = 0; sy < hh; ++sy) {
-		memcpy(dst, src, size);
-		dst += back_buffer.width;
-		src += w;
-	}
-}
-
 struct tb_cell *tb_cell_buffer(void) {
 	return back_buffer.cells;
 }
@@ -366,11 +331,10 @@ int tb_height(void) {
 	return termh;
 }
 
-void tb_clear(void) {
-	if (buffer_size_change_request) {
-		tb_update_size();
-		buffer_size_change_request = 0;
-	}
+void tb_clear_buffer(void) {
+	if (buffer_size_change_request)
+		tb_resize();
+
 	cellbuf_clear(&back_buffer);
 }
 
@@ -412,12 +376,56 @@ void tb_set_clear_attributes(tb_color fg, tb_color bg) {
 	background = bg;
 }
 
-void tb_update_size(void) {
-	update_term_size();
+void tb_resize(void) {
+	if (buffer_size_change_request) {
+		buffer_size_change_request = 0;
+	} else {
+		update_term_size();
+	}
 	cellbuf_resize(&back_buffer, termw, termh);
 	cellbuf_resize(&front_buffer, termw, termh);
 	cellbuf_clear(&front_buffer);
-	send_clear();
+
+	tb_clear_screen();
+}
+
+void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells) {
+  if (x + w < 0 || x >= back_buffer.width)
+    return;
+
+  if (y + h < 0 || y >= back_buffer.height)
+    return;
+
+  int xo = 0, yo = 0, ww = w, hh = h;
+
+  if (x < 0) {
+    xo = -x;
+    ww -= xo;
+    x = 0;
+  }
+
+  if (y < 0) {
+    yo = -y;
+    hh -= yo;
+    y = 0;
+  }
+
+  if (ww > back_buffer.width - x)
+    ww = back_buffer.width - x;
+
+  if (hh > back_buffer.height - y)
+    hh = back_buffer.height - y;
+
+  int sy;
+  struct tb_cell *dst = &CELL(&back_buffer, x, y);
+  const struct tb_cell *src = cells + yo * w + xo;
+  size_t size = sizeof(struct tb_cell) * ww;
+
+  for (sy = 0; sy < hh; ++sy) {
+    memcpy(dst, src, size);
+    dst += back_buffer.width;
+    src += w;
+  }
 }
 
 /* -------------------------------------------------------- */
@@ -562,19 +570,9 @@ static void cellbuf_free(struct cellbuf *buf) {
 	free(buf->cells);
 }
 
-static void get_term_size(int *w, int *h) {
-	struct winsize sz;
-	memset(&sz, 0, sizeof(sz));
-	ioctl(inout, TIOCGWINSZ, &sz);
-
-	if (w) *w = sz.ws_col;
-	if (h) *h = sz.ws_row;
-}
-
 static void update_term_size(void) {
 	struct winsize sz;
 	memset(&sz, 0, sizeof(sz));
-
 	ioctl(inout, TIOCGWINSZ, &sz);
 
 	termw = sz.ws_col;
@@ -759,7 +757,10 @@ static int wait_fill_event(struct tb_event *event, struct timeval *timeout) {
       int zzz = 0;
       n = read(winch_fds[0], &zzz, sizeof(int));
       buffer_size_change_request = 1;
-      get_term_size(&event->w, &event->h);
+
+      update_term_size();
+      event->w = termw;
+      event->h = termh;
       return TB_EVENT_RESIZE;
     }
 

@@ -4,7 +4,7 @@
 #include "../src/termbox.h"
 
 static int curCol = 0;
-static int curRune = 0;
+static int curRune = 4;
 static struct tb_cell *backbuf;
 static int bbw = 0, bbh = 0;
 
@@ -77,7 +77,6 @@ void colorAttrFunc(int i, tb_color *r, tb_color *fg, tb_color *bg) {
 }
 
 void updateAndRedrawAll(int mx, int my) {
-	tb_clear();
 	if (mx != -1 && my != -1) {
 		backbuf[bbw*my+mx].ch = runes[curRune];
 		backbuf[bbw*my+mx].fg = colors[curCol];
@@ -109,6 +108,7 @@ int main(void) {
 	int h = tb_height();
 	reallocBackBuffer(w, h);
 	updateAndRedrawAll(-1, -1);
+
 	for (;;) {
 		struct tb_event ev;
 		int mx = -1;
@@ -134,6 +134,7 @@ int main(void) {
 			}
 			break;
 		case TB_EVENT_RESIZE:
+			tb_resize();
 			reallocBackBuffer(ev.w, ev.h);
 			break;
 		}

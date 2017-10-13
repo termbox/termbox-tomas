@@ -227,7 +227,7 @@ SO_IMPORT void tb_shutdown(void);
 
 /* Returns the size of the internal back buffer (which is the same as
  * terminal's window size in characters). The internal buffer can be resized
- * after tb_clear() or tb_present() function calls. Both dimensions have an
+ * after tb_resize() or tb_present() function calls. Both dimensions have an
  * unspecified negative value when called before tb_init() or after
  * tb_shutdown().
  */
@@ -237,7 +237,7 @@ SO_IMPORT int tb_height(void);
 /* Clears the internal back buffer using TB_DEFAULT color or the
  * color/attributes set by tb_set_clear_attributes() function.
  */
-SO_IMPORT void tb_clear(void);
+SO_IMPORT void tb_clear_buffer(void);
 SO_IMPORT void tb_clear_screen(void);
 SO_IMPORT void tb_set_clear_attributes(tb_color fg, tb_color bg);
 
@@ -273,7 +273,7 @@ SO_IMPORT void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells);
 
 /* Returns a pointer to internal cell back buffer. You can get its dimensions
  * using tb_width() and tb_height() functions. The pointer stays valid as long
- * as no tb_clear() and tb_present() calls are made. The buffer is
+ * as no tb_resize() and tb_present() calls are made. The buffer is
  * one-dimensional buffer containing lines of cells starting from the top.
  */
 SO_IMPORT struct tb_cell *tb_cell_buffer(void);
@@ -343,8 +343,7 @@ SO_IMPORT int tb_peek_event(struct tb_event *event, int timeout);
  */
 SO_IMPORT int tb_poll_event(struct tb_event *event);
 
-/* Forcefully update the size of the buffers. */
-SO_IMPORT void tb_update_size(void);
+SO_IMPORT void tb_resize(void);
 
 /* Utility utf8 functions. */
 #define TB_EOF -1
