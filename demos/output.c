@@ -15,6 +15,7 @@ static int next_char(int current) {
 	current++;
 	if (!chars[current])
 		current = 0;
+
 	return current;
 }
 
@@ -24,7 +25,7 @@ static void draw_line(int x, int y, tb_color bg) {
 	for (a = 0; a < 4; a++) {
 		for (c = TB_DEFAULT; c <= TB_WHITE; c++) {
 			tb_color fg = all_attrs[a] | c;
-			tb_change_cell(x, y, chars[current_char], fg, bg);
+			tb_char(x, y, fg, bg, chars[current_char]);
 			current_char = next_char(current_char);
 			x++;
 		}
@@ -51,15 +52,15 @@ static void draw_all() {
 
 	print_combinations_table(1, 1, col1, 2);
 	print_combinations_table(2 + strlen(chars), 1, col2, 1);
-	tb_present();
+	tb_render();
 
 	tb_select_output_mode(TB_OUTPUT_GRAYSCALE);
 	int c, x, y;
 	for (x = 0, y = 23; x < 24; ++x) {
-		tb_change_cell(x, y, '@', x, 0);
-		tb_change_cell(x+25, y, ' ', 0, x);
+		tb_char(x, y, x, 0, '@');
+		tb_char(x+25, y, 0, x, ' ');
 	}
-	tb_present();
+	tb_render();
 
 	tb_select_output_mode(TB_OUTPUT_216);
 	y++;
@@ -68,22 +69,24 @@ static void draw_all() {
 			x = 0;
 			++y;
 		}
-		tb_change_cell(x, y, '@', c, 0);
-		tb_change_cell(x+25, y, ' ', 0, c);
+		tb_char(x, y, c, 0, '@');
+		tb_char(x+25, y, 0, c, ' ');
 	}
-	tb_present();
 
+	tb_render();
 	tb_select_output_mode(TB_OUTPUT_256);
 	y++;
+
 	for (c = 0, x = 0; c < 256; ++c, ++x) {
 		if (!(x%24)) {
 			x = 0;
 			++y;
 		}
-		tb_change_cell(x, y, '+', c | ((y & 1) ? TB_UNDERLINE : 0), 0);
-		tb_change_cell(x+25, y, ' ', 0, c);
+		tb_char(x, y, c | ((y & 1) ? TB_UNDERLINE : 0), 0, '+');
+		tb_char(x+25, y, 0, c, ' ');
 	}
-	tb_present();
+
+	tb_render();
 }
 
 int main(int argc, char **argv) {

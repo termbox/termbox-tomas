@@ -345,7 +345,7 @@ struct combo func_combos[] = {
 void draw_key(struct key *k, tb_color fg, tb_color bg)
 {
 	while (k->x) {
-		tb_change_cell(k->x+2, k->y+4, k->ch, fg, bg);
+		tb_char(k->x+2, k->y+4, fg, bg, k->ch);
 		k++;
 	}
 }
@@ -353,28 +353,31 @@ void draw_key(struct key *k, tb_color fg, tb_color bg)
 void draw_keyboard()
 {
 	int i;
-	tb_change_cell(0, 0, 0x250C, TB_WHITE, TB_DEFAULT);
-	tb_change_cell(79, 0, 0x2510, TB_WHITE, TB_DEFAULT);
-	tb_change_cell(0, 23, 0x2514, TB_WHITE, TB_DEFAULT);
-	tb_change_cell(79, 23, 0x2518, TB_WHITE, TB_DEFAULT);
+	tb_char(0, 0, TB_WHITE, TB_DEFAULT, 0x250C);
+	tb_char(79, 0, TB_WHITE, TB_DEFAULT, 0x2510);
+	tb_char(0, 23, TB_WHITE, TB_DEFAULT, 0x2514);
+	tb_char(79, 23, TB_WHITE, TB_DEFAULT, 0x2518);
 
 	for (i = 1; i < 79; ++i) {
-		tb_change_cell(i, 0, 0x2500, TB_WHITE, TB_DEFAULT);
-		tb_change_cell(i, 23, 0x2500, TB_WHITE, TB_DEFAULT);
-		tb_change_cell(i, 17, 0x2500, TB_WHITE, TB_DEFAULT);
-		tb_change_cell(i, 4, 0x2500, TB_WHITE, TB_DEFAULT);
+		tb_char(i, 0, TB_WHITE, TB_DEFAULT, 0x2500);
+		tb_char(i, 23, TB_WHITE, TB_DEFAULT, 0x2500);
+		tb_char(i, 17, TB_WHITE, TB_DEFAULT, 0x2500);
+		tb_char(i, 4, TB_WHITE, TB_DEFAULT, 0x2500);
 	}
+
 	for (i = 1; i < 23; ++i) {
-		tb_change_cell(0, i, 0x2502, TB_WHITE, TB_DEFAULT);
-		tb_change_cell(79, i, 0x2502, TB_WHITE, TB_DEFAULT);
+		tb_char(0, i, TB_WHITE, TB_DEFAULT, 0x2502);
+		tb_char(79, i, TB_WHITE, TB_DEFAULT, 0x2502);
 	}
-	tb_change_cell(0, 17, 0x251C, TB_WHITE, TB_DEFAULT);
-	tb_change_cell(79, 17, 0x2524, TB_WHITE, TB_DEFAULT);
-	tb_change_cell(0, 4, 0x251C, TB_WHITE, TB_DEFAULT);
-	tb_change_cell(79, 4, 0x2524, TB_WHITE, TB_DEFAULT);
+
+	tb_char(0, 17, TB_WHITE, TB_DEFAULT, 0x251C);
+	tb_char(79, 17, TB_WHITE, TB_DEFAULT, 0x2524);
+	tb_char(0, 4, TB_WHITE, TB_DEFAULT, 0x251C);
+	tb_char(79, 4, TB_WHITE, TB_DEFAULT, 0x2524);
+
 	for (i = 5; i < 17; ++i) {
-		tb_change_cell(1, i, 0x2588, TB_YELLOW, TB_YELLOW);
-		tb_change_cell(78, i, 0x2588, TB_YELLOW, TB_YELLOW);
+		tb_char(1, i, TB_YELLOW, TB_YELLOW, 0x2588);
+		tb_char(78, i, TB_YELLOW, TB_YELLOW, 0x2588);
 	}
 
 	draw_key(K_ESC, TB_WHITE, TB_BLUE);
@@ -490,9 +493,9 @@ void draw_keyboard()
 	draw_key(K_K_0, TB_WHITE, TB_BLUE);
 	draw_key(K_K_PERIOD, TB_WHITE, TB_BLUE);
 
-	tb_print(33, 1, TB_MAGENTA | TB_BOLD, TB_DEFAULT, "Keyboard demo!");
-	tb_print(21, 2, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+Q to exit)");
-	tb_print(15, 3, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+C to change input mode)");
+	tb_string(33, 1, TB_MAGENTA | TB_BOLD, TB_DEFAULT, "Keyboard demo!");
+	tb_string(21, 2, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+Q to exit)");
+	tb_string(15, 3, TB_MAGENTA, TB_DEFAULT, "(press CTRL+X and then CTRL+C to change input mode)");
 }
 
 const char *funckeymap(int k)
@@ -570,31 +573,28 @@ void pretty_print_press(struct tb_event *ev)
 {
 	char buf[7];
 	buf[tb_utf8_unicode_to_char(buf, ev->ch)] = '\0';
-	tb_printf(3, 19, TB_WHITE , TB_DEFAULT, "Key: ");
-	tb_printf(8, 19, TB_YELLOW, TB_DEFAULT, "decimal: %d", ev->key);
-	tb_printf(8, 20, TB_GREEN , TB_DEFAULT, "hex:     0x%X", ev->key);
-	tb_printf(8, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->key);
-	tb_printf(8, 22, TB_RED   , TB_DEFAULT, "string:  %s", funckeymap(ev->key));
-
-	tb_printf(54, 19, TB_WHITE , TB_DEFAULT, "Char: ");
-	tb_printf(60, 19, TB_YELLOW, TB_DEFAULT, "decimal: %d", ev->ch);
-	tb_printf(60, 20, TB_GREEN , TB_DEFAULT, "hex:     0x%X", ev->ch);
-	tb_printf(60, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->ch);
-	tb_printf(60, 22, TB_RED   , TB_DEFAULT, "string:  %s", buf);
-
-	tb_printf(54, 18, TB_WHITE, TB_DEFAULT, "Meta: %d", ev->meta);
-
+	tb_stringf(3, 19, TB_WHITE , TB_DEFAULT, "Key: ");
+	tb_stringf(8, 19, TB_YELLOW, TB_DEFAULT, "decimal: %d", ev->key);
+	tb_stringf(8, 20, TB_GREEN , TB_DEFAULT, "hex:     0x%X", ev->key);
+	tb_stringf(8, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->key);
+	tb_stringf(8, 22, TB_RED   , TB_DEFAULT, "string:  %s", funckeymap(ev->key));
+	tb_stringf(54, 19, TB_WHITE , TB_DEFAULT, "Char: ");
+	tb_stringf(60, 19, TB_YELLOW, TB_DEFAULT, "decimal: %d", ev->ch);
+	tb_stringf(60, 20, TB_GREEN , TB_DEFAULT, "hex:     0x%X", ev->ch);
+	tb_stringf(60, 21, TB_CYAN  , TB_DEFAULT, "octal:   0%o", ev->ch);
+	tb_stringf(60, 22, TB_RED   , TB_DEFAULT, "string:  %s", buf);
+	tb_stringf(54, 18, TB_WHITE, TB_DEFAULT, "Meta: %d", ev->meta);
 }
 
 void pretty_print_resize(struct tb_event *ev)
 {
-	tb_printf(3, 19, TB_WHITE, TB_DEFAULT, "Resize event: %d x %d", ev->w, ev->h);
+	tb_stringf(3, 19, TB_WHITE, TB_DEFAULT, "Resize event: %d x %d", ev->w, ev->h);
 }
 
 int counter = 0;
 
 void  pretty_print_mouse(struct tb_event *ev) {
-	tb_printf(3, 19, TB_WHITE, TB_DEFAULT, "Mouse event: %d x %d", ev->x, ev->y);
+	tb_stringf(3, 19, TB_WHITE, TB_DEFAULT, "Mouse event: %d x %d", ev->x, ev->y);
 	char *btn = "";
 	switch (ev->key) {
 	case TB_KEY_MOUSE_LEFT:
@@ -616,11 +616,9 @@ void  pretty_print_mouse(struct tb_event *ev) {
 		btn = "MouseRelease: %d";
 	}
 	counter++;
-	tb_printf(43, 19, TB_WHITE, TB_DEFAULT, "Key: ");
-	tb_printf(48, 19, TB_YELLOW, TB_DEFAULT, btn, counter);
-
-	tb_printf(43, 20, TB_WHITE, TB_DEFAULT, "Meta: %d ", ev->meta);
-
+	tb_stringf(43, 19, TB_WHITE, TB_DEFAULT, "Key: ");
+	tb_stringf(48, 19, TB_YELLOW, TB_DEFAULT, btn, counter);
+	tb_stringf(43, 20, TB_WHITE, TB_DEFAULT, "Meta: %d ", ev->meta);
 }
 
 void dispatch_press(struct tb_event *ev)
@@ -664,7 +662,7 @@ int main(int argc, char **argv)
 	struct tb_event ev;
 
 	draw_keyboard();
-	tb_present();
+	tb_render();
 	int ctrlxpressed = 0;
 
 	tb_set_title("Keyboard demo");
@@ -703,7 +701,7 @@ int main(int argc, char **argv)
 			break;
 		}
 
-		tb_present();
+		tb_render();
 	}
 
 	tb_shutdown();

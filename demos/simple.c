@@ -14,8 +14,8 @@ int main(void) {
   int w = tb_width();
   int h = tb_height();
 
-  tb_print((w/2)-6, h/2, bg_color, fg_color, "Hello click.");
-  tb_present();
+  tb_string((w/2)-6, h/2, bg_color, fg_color, "Hello click.");
+  tb_render();
 
   int clicks = 0;
   tb_enable_mouse();
@@ -27,7 +27,7 @@ int main(void) {
     switch (ev.type) {
     case TB_EVENT_RESIZE:
       tb_resize();
-      tb_printf((w/2)-10, h/2, bg_color, fg_color, "Window resized to: %dx%d", ev.w, ev.h);
+      tb_stringf((w/2)-10, h/2, bg_color, fg_color, "Window resized to: %dx%d", ev.w, ev.h);
       break;
 
     case TB_EVENT_KEY:
@@ -37,13 +37,13 @@ int main(void) {
       break;
     case TB_EVENT_MOUSE:
       if (ev.key == TB_KEY_MOUSE_LEFT) {
-        tb_printf((w/2)-10, h/2, bg_color, fg_color, "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
+        tb_stringf((w/2)-10, h/2, bg_color, fg_color, "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
       }
       break;
     }
 
     // flush the output
-    tb_present();
+    tb_render();
   }
 
   done:

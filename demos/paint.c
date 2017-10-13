@@ -39,14 +39,14 @@ void updateAndDrawButtons(int *current, int x, int y, int mx, int my, int n, voi
 		tb_color r;
 		tb_color fg, bg;
 		(*attrFunc)(i, &r, &fg, &bg);
-                tb_change_cell(lx+0, ly+0, r, fg, bg);
-                tb_change_cell(lx+1, ly+0, r, fg, bg);
-                tb_change_cell(lx+2, ly+0, r, fg, bg);
-                tb_change_cell(lx+3, ly+0, r, fg, bg);
-                tb_change_cell(lx+0, ly+1, r, fg, bg);
-                tb_change_cell(lx+1, ly+1, r, fg, bg);
-                tb_change_cell(lx+2, ly+1, r, fg, bg);
-                tb_change_cell(lx+3, ly+1, r, fg, bg);
+                tb_char(lx+0, ly+0, fg, bg, r);
+                tb_char(lx+1, ly+0, fg, bg, r);
+                tb_char(lx+2, ly+0, fg, bg, r);
+                tb_char(lx+3, ly+0, fg, bg, r);
+                tb_char(lx+0, ly+1, fg, bg, r);
+                tb_char(lx+1, ly+1, fg, bg, r);
+                tb_char(lx+2, ly+1, fg, bg, r);
+                tb_char(lx+3, ly+1, fg, bg, r);
                 lx += 4;
 	}
 	lx = x;
@@ -55,10 +55,10 @@ void updateAndDrawButtons(int *current, int x, int y, int mx, int my, int n, voi
                 if (*current == i) {
                         tb_color fg = TB_RED | TB_BOLD;
                         tb_color bg = TB_DEFAULT;
-                        tb_change_cell(lx+0, ly+2, '^', fg, bg);
-                        tb_change_cell(lx+1, ly+2, '^', fg, bg);
-                        tb_change_cell(lx+2, ly+2, '^', fg, bg);
-                        tb_change_cell(lx+3, ly+2, '^', fg, bg);
+                        tb_char(lx+0, ly+2, fg, bg, '^');
+                        tb_char(lx+1, ly+2, fg, bg, '^');
+                        tb_char(lx+2, ly+2, fg, bg, '^');
+                        tb_char(lx+3, ly+2, fg, bg, '^');
                 }
                 lx += 4;
         }
@@ -85,7 +85,7 @@ void updateAndRedrawAll(int mx, int my) {
 	int h = tb_height();
 	updateAndDrawButtons(&curRune, 0, 0, mx, my, len(runes), runeAttrFunc);
 	updateAndDrawButtons(&curCol, 0, h-3, mx, my, len(colors), colorAttrFunc);
-	tb_present();
+	tb_render();
 }
 
 void reallocBackBuffer(int w, int h) {
