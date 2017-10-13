@@ -376,7 +376,7 @@ void tb_clear(void) {
 }
 
 void tb_clear_screen(void) {
-	return send_clear();
+	send_clear();
 }
 
 void tb_enable_mouse(void) {
