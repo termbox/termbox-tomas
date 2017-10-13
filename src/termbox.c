@@ -133,7 +133,9 @@ int tb_init_screen(int flags) {
 
 	if (initflags & TB_INIT_ALTSCREEN) {
 		bytebuffer_puts(&output_buffer, funcs[T_ENTER_CA]);
-		send_clear();
+		send_clear(); // flushes output
+	} else {
+		bytebuffer_flush(&output_buffer, inout);
 	}
 
 	update_term_size();
