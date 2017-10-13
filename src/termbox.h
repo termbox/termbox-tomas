@@ -209,9 +209,10 @@ struct tb_event {
 
 /* Flags passed to tb_init_with() to specify which features should be enabled.
  */
+#define TB_INIT_ALL        -1
 #define TB_INIT_ALTSCREEN   1
 #define TB_INIT_KEYPAD      2
-#define TB_INIT_EVERYTHING -1
+#define TB_INIT_NO_CURSOR   3
 
 /* Initializes the termbox library. This function should be called before any
  * other functions. Function tb_init is same as tb_init_file("/dev/tty").
@@ -238,16 +239,13 @@ SO_IMPORT int tb_height(void);
  * color/attributes set by tb_set_clear_attributes() function.
  */
 SO_IMPORT void tb_clear_buffer(void);
-SO_IMPORT void tb_clear_screen(void);
 SO_IMPORT void tb_set_clear_attributes(tb_color fg, tb_color bg);
 
-/* Synchronizes the internal back buffer with the terminal. */
-SO_IMPORT void tb_present(void);
+// Clear screen.
+SO_IMPORT void tb_clear_screen(void);
 
-SO_IMPORT void tb_set_title(const char * title);
-SO_IMPORT void tb_puts(const char * str, int flush);
-SO_IMPORT int tb_print(int x, int y, tb_color fg, tb_color bg, char * str);
-SO_IMPORT int tb_printf(int x, int y, tb_color fg, tb_color bg, const char * fmt, ...);
+/* Sincronize the internal back buffer with the terminal. */
+SO_IMPORT void tb_render(void);
 
 /* Sets the position of the cursor. Upper-left character is (0, 0). If you pass
  * TB_HIDE_CURSOR as both coordinates, then the cursor will be hidden. Cursor
@@ -257,19 +255,30 @@ SO_IMPORT int tb_printf(int x, int y, tb_color fg, tb_color bg, const char * fmt
 #define TB_HIDE_CURSOR -1
 SO_IMPORT void tb_set_cursor(int cx, int cy);
 
+SO_IMPORT void tb_set_title(const char * title);
+
+// Flush output buffer to file descriptor (stdout).
+SO_IMPORT void tb_flush(void);
+
+/* Append string directly to output */
+SO_IMPORT void tb_send(const char * str);
+
+/* Same as above but with format and arguments (printf-style) */
+SO_IMPORT void tb_sendf(const char * fmt, ...);
+
+/* Set string starting at specific position */
+SO_IMPORT int tb_string(int x, int y, tb_color fg, tb_color bg, char * str);
+
+/* Same as above but with format and arguments (printf-style) */
+SO_IMPORT int tb_stringf(int x, int y, tb_color fg, tb_color bg, const char * fmt, ...);
+
+/* Set char at specific position */
+SO_IMPORT void tb_char(int x, int y, tb_color fg, tb_color bg, uint32_t ch);
+
 /* Changes cell's parameters in the internal back buffer at the specified
  * position.
  */
-SO_IMPORT void tb_put_cell(int x, int y, const struct tb_cell *cell);
-SO_IMPORT void tb_change_cell(int x, int y, uint32_t ch, tb_color fg, tb_color bg);
-
-/* Copies the buffer from 'cells' at the specified position, assuming the
- * buffer is a two-dimensional array of size ('w' x 'h'), represented as a
- * one-dimensional buffer containing lines of cells starting from the top.
- *
- * (DEPRECATED: use tb_cell_buffer() instead and copy memory on your own)
- */
-SO_IMPORT void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells);
+SO_IMPORT void tb_cell(int x, int y, const struct tb_cell *cell);
 
 /* Returns a pointer to internal cell back buffer. You can get its dimensions
  * using tb_width() and tb_height() functions. The pointer stays valid as long

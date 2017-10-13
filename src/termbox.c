@@ -45,7 +45,7 @@ static int termw = -1;
 static int termh = -1;
 
 static bool title_set = false;
-static int initflags = TB_INIT_EVERYTHING;
+static int initflags = TB_INIT_ALL;
 static int outputmode = TB_OUTPUT_NORMAL;
 
 static int inout;
@@ -127,7 +127,7 @@ int tb_init_screen(int flags) {
 	if (initflags & TB_INIT_KEYPAD)
 		bytebuffer_puts(&output_buffer, funcs[T_ENTER_KEYPAD]);
 
-	if (initflags & TB_HIDE_CURSOR)
+	if (initflags & TB_INIT_NO_CURSOR)
 		bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
 
 	if (initflags & TB_INIT_ALTSCREEN) {
@@ -161,7 +161,7 @@ int tb_init(void) {
 	int res = tb_init_file("/dev/tty");
 	if (res != 0) return res;
 
-	return tb_init_screen(TB_INIT_EVERYTHING);
+	return tb_init_screen(TB_INIT_ALL);
 }
 
 void tb_shutdown(void) {
@@ -198,7 +198,7 @@ void tb_shutdown(void) {
 	termw = termh = -1;
 }
 
-void tb_present(void) {
+void tb_render(void) {
 	int x,y,w,i;
 	struct tb_cell *back, *front;
 
@@ -245,11 +245,6 @@ void tb_present(void) {
 	bytebuffer_flush(&output_buffer, inout);
 }
 
-void tb_puts(const char * str, int flush) {
-	bytebuffer_puts(&output_buffer, str); // same as append but without length
-	if (flush) bytebuffer_flush(&output_buffer, inout);
-}
-
 void tb_set_cursor(int cx, int cy) {
 	if (IS_CURSOR_HIDDEN(cursor_x, cursor_y) && !IS_CURSOR_HIDDEN(cx, cy))
 		bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
@@ -269,7 +264,24 @@ void tb_set_title(const char * title) {
 	write_title(title);
 }
 
-void tb_put_cell(int x, int y, const struct tb_cell *cell) {
+void tb_flush(void) {
+	bytebuffer_flush(&output_buffer, inout);
+}
+
+void tb_send(const char * str) {
+	bytebuffer_puts(&output_buffer, str); // same as append but without length
+}
+
+void tb_sendf(const char * fmt, ...) {
+	char buf[1024];
+	va_list vl;
+	va_start(vl, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, vl);
+	va_end(vl);
+	return tb_send(buf);
+}
+
+void tb_cell(int x, int y, const struct tb_cell *cell) {
 	if ((unsigned)x >= (unsigned)back_buffer.width)
 		return;
 
@@ -279,19 +291,19 @@ void tb_put_cell(int x, int y, const struct tb_cell *cell) {
 	CELL(&back_buffer, x, y) = *cell;
 }
 
-void tb_change_cell(int x, int y, uint32_t ch, tb_color fg, tb_color bg) {
+void tb_char(int x, int y, tb_color fg, tb_color bg, uint32_t ch) {
 	struct tb_cell c = {ch, fg, bg};
-	tb_put_cell(x, y, &c);
+	tb_cell(x, y, &c);
 }
 
-int tb_print(int x, int y, tb_color fg, tb_color bg, char *str) {
+int tb_string(int x, int y, tb_color fg, tb_color bg, char *str) {
   uint32_t uni;
   int c;
   c = 0;
 
   while (*str) {
     str += tb_utf8_char_to_unicode(&uni, str);
-    tb_change_cell(x, y, uni, fg, bg);
+    tb_char(x, y, fg, bg, uni);
     x++;
     c++;
   }
@@ -299,13 +311,13 @@ int tb_print(int x, int y, tb_color fg, tb_color bg, char *str) {
   return c;
 }
 
-int tb_printf(int x, int y, tb_color fg, tb_color bg, const char *fmt, ...) {
+int tb_stringf(int x, int y, tb_color fg, tb_color bg, const char *fmt, ...) {
 	char buf[1024];
 	va_list vl;
 	va_start(vl, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, vl);
 	va_end(vl);
-	return tb_print(x, y, fg, bg, buf);
+	return tb_string(x, y, fg, bg, buf);
 }
 
 struct tb_cell *tb_cell_buffer(void) {
@@ -338,24 +350,6 @@ void tb_clear_buffer(void) {
 	cellbuf_clear(&back_buffer);
 }
 
-void tb_clear_screen(void) {
-	send_attr(foreground, background);
-	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
-
-	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
-		write_cursor(cursor_x, cursor_y);
-
-	bytebuffer_flush(&output_buffer, inout);
-
-	/* we need to invalidate cursor position too and these two vars are
-	 * used only for simple cursor positioning optimization, cursor
-	 * actually may be in the correct place, but we simply discard
-	 * optimization once and it gives us simple solution for the case when
-	 * cursor moved */
-	lastx = LAST_COORD_INIT;
-	lasty = LAST_COORD_INIT;
-}
-
 void tb_enable_mouse(void) {
 	bytebuffer_puts(&output_buffer, funcs[T_ENTER_MOUSE]);
 	bytebuffer_flush(&output_buffer, inout);
@@ -376,6 +370,24 @@ void tb_set_clear_attributes(tb_color fg, tb_color bg) {
 	background = bg;
 }
 
+void tb_clear_screen(void) {
+	send_attr(foreground, background);
+	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
+
+	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
+		write_cursor(cursor_x, cursor_y);
+
+	bytebuffer_flush(&output_buffer, inout);
+
+	/* we need to invalidate cursor position too and these two vars are
+	 * used only for simple cursor positioning optimization, cursor
+	 * actually may be in the correct place, but we simply discard
+	 * optimization once and it gives us simple solution for the case when
+	 * cursor moved */
+	lastx = LAST_COORD_INIT;
+	lasty = LAST_COORD_INIT;
+}
+
 void tb_resize(void) {
 	if (buffer_size_change_request) {
 		buffer_size_change_request = 0;
@@ -388,45 +400,6 @@ void tb_resize(void) {
 	cellbuf_clear(&front_buffer);
 
 	tb_clear_screen();
-}
-
-void tb_blit(int x, int y, int w, int h, const struct tb_cell *cells) {
-  if (x + w < 0 || x >= back_buffer.width)
-    return;
-
-  if (y + h < 0 || y >= back_buffer.height)
-    return;
-
-  int xo = 0, yo = 0, ww = w, hh = h;
-
-  if (x < 0) {
-    xo = -x;
-    ww -= xo;
-    x = 0;
-  }
-
-  if (y < 0) {
-    yo = -y;
-    hh -= yo;
-    y = 0;
-  }
-
-  if (ww > back_buffer.width - x)
-    ww = back_buffer.width - x;
-
-  if (hh > back_buffer.height - y)
-    hh = back_buffer.height - y;
-
-  int sy;
-  struct tb_cell *dst = &CELL(&back_buffer, x, y);
-  const struct tb_cell *src = cells + yo * w + xo;
-  size_t size = sizeof(struct tb_cell) * ww;
-
-  for (sy = 0; sy < hh; ++sy) {
-    memcpy(dst, src, size);
-    dst += back_buffer.width;
-    src += w;
-  }
 }
 
 /* -------------------------------------------------------- */
@@ -522,7 +495,7 @@ static void write_sgr(tb_color fg, tb_color bg) {
 }
 
 static void write_title(const char * title) {
-	printf("%c]0;%s%c\n", '\033', title, '\007');
+	tb_sendf("%c]0;%s%c\n", '\033', title, '\007');
 }
 
 static void cellbuf_init(struct cellbuf *buf, int width, int height) {
