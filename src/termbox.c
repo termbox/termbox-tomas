@@ -124,11 +124,11 @@ int tb_init_screen(int flags) {
 
 	initflags = flags;
 
+	if (initflags & TB_INIT_NO_CURSOR)
+		tb_hide_cursor();
+
 	if (initflags & TB_INIT_KEYPAD)
 		bytebuffer_puts(&output_buffer, funcs[T_ENTER_KEYPAD]);
-
-	if (initflags & TB_INIT_NO_CURSOR)
-		bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
 
 	if (initflags & TB_INIT_ALTSCREEN) {
 		bytebuffer_puts(&output_buffer, funcs[T_ENTER_CA]);
@@ -171,7 +171,7 @@ void tb_shutdown(void) {
 	}
 
 	if (title_set) write_title("");
-	bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
+	tb_show_cursor();
 	bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
 
 	if (initflags & TB_INIT_ALTSCREEN) {
@@ -247,10 +247,10 @@ void tb_render(void) {
 
 void tb_set_cursor(int cx, int cy) {
 	if (IS_CURSOR_HIDDEN(cursor_x, cursor_y) && !IS_CURSOR_HIDDEN(cx, cy))
-		bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
+		tb_show_cursor();
 
 	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y) && IS_CURSOR_HIDDEN(cx, cy))
-		bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
+		tb_hide_cursor();
 
 	cursor_x = cx;
 	cursor_y = cy;
@@ -348,6 +348,14 @@ void tb_clear_buffer(void) {
 		tb_resize();
 
 	cellbuf_clear(&back_buffer);
+}
+
+void tb_hide_cursor(void) {
+	bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
+}
+
+void tb_show_cursor(void) {
+	bytebuffer_puts(&output_buffer, funcs[T_SHOW_CURSOR]);
 }
 
 void tb_enable_mouse(void) {

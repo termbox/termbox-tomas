@@ -287,6 +287,9 @@ SO_IMPORT void tb_cell(int x, int y, const struct tb_cell *cell);
  */
 SO_IMPORT struct tb_cell *tb_cell_buffer(void);
 
+SO_IMPORT void tb_hide_cursor(void);
+SO_IMPORT void tb_show_cursor(void);
+
 SO_IMPORT void tb_enable_mouse(void);
 SO_IMPORT void tb_disable_mouse(void);
 

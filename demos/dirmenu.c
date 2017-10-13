@@ -75,7 +75,6 @@ int add_choice(const char * str) {
 
 ////////////////////////////////////////////////////////////
 
-
 void cursor_up(int times) {
   tb_sendf("\033[%dA", times);
 }
@@ -96,19 +95,13 @@ void clear_eol() {
   tb_sendf("\033[K");
 }
 
+void print_clear(const char * str) {
+  tb_sendf("%s\033[K", str);
+}
+
 void print_line(const char * str) {
   tb_sendf("%s\033[K\n", str);
   cursor_left(tb_width());
-}
-
-void print(char *format, ...) {
-  int w = tb_width();
-  char msg[w];
-  va_list args;
-  va_start(args, format);
-  vsnprintf(msg, w, format, args);
-  print_line(msg);
-  va_end(args);
 }
 
 void tb_menu_reset() {
@@ -122,13 +115,13 @@ void tb_menu_prompt(char * query, int len, int pos) {
 
   if (query != NULL) {
     query[len] = '\0';
-    tb_sendf("%s\033[K", query);
+    print_clear(query);
     if (pos < len) {
       cursor_left(len - pos);
     }
   }
 
-  tb_sendf("\033[?25h"); // show cursor
+  tb_show_cursor();
 }
 
 void tb_menu_redraw(int lines) {
@@ -142,11 +135,6 @@ void tb_menu_redraw(int lines) {
 
   cursor_down(1);
   cursor_left(w);
-
-//  if (num_choices < num_lines) {
-//    prev_lines = num_lines;
-//    num_lines = num_choices;
-//  }
 
   if (lines > 0)
     num_lines = lines;
@@ -172,8 +160,7 @@ void tb_menu_redraw(int lines) {
       tb_sendf("%c", choices.v[i].string[col]);
       col++;
     }
-    tb_send("\033[K\n");
-    cursor_left(w);
+    print_line("");
 #else
     sprintf(line, " [%d] %s", i+1, choices.v[i].string);
     print_line(line);
@@ -193,23 +180,13 @@ void tb_menu_redraw(int lines) {
     cursor_up(num_lines + 1);
   }
 
-  tb_send("\033[?25l"); // hide cursor and flush
+  tb_hide_cursor();
   tb_flush();
-  // tb_menu_prompt(NULL, 0, 0);
 }
 
 void tb_menu_remove_option(int index) {
   if (index >= num_choices)
     return;
-
-/*
-  int i;
-  for (i = index; i < num_choices - 1; i++) {
-    choices[i] = choices[i + 1];
-  }
-
-  choices[--num_choices] = NULL;
-*/
 }
 
 int tb_menu_add_option(const char * option) {

@@ -1,11 +1,13 @@
 # Termbox
 
-A small library in C for building text-based user interfaces. This is a fork of nsf's [original work](https://github.com/nsf/termbox), with a few changes:
+A small library in C for building text-based user interfaces. This is a (non-compatible) fork of nsf's [original work](https://github.com/nsf/termbox), with a few changes:
 
  - Better input handling, so Ctrl/Alt/Shift key combos are property detected
  - Additional init options, (e.g. skip clearing full screen, cursor hiding, etc)
  - True color support
  - Some other stuff that was cherry picked from the forks across Github
+
+Important: This fork isn't a drop-in replacement for the original fork, as several methods have changed and/or have been renamed.
 
 ## Installation
 
