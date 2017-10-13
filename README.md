@@ -48,10 +48,10 @@ int main(int argc, char **argv) {
   int h = tb_height();
 
   // now, put some text in the middle of the screen
-  tb_print((w/2)-10, h/2, bg_color, fg_color, "Hello world!");
+  tb_string((w/2)-10, h/2, bg_color, fg_color, "Hello world!");
 
   // flush the output to the screen
-  tb_present();
+  tb_render();
 
   // wait a few secs
   sleep(3);
@@ -93,7 +93,7 @@ while (tb_poll_event(&ev) != -1) {
         tb_printf((w/2)-6, h/2, bg_color, fg_color,
           "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
 
-        tb_present();
+        tb_render();
       }
       break;
   }
@@ -114,10 +114,6 @@ For more information, take a look at [the demos](https://github.com/tomas/termbo
 - https://github.com/gchp/rustbox - Rust Termbox wrapper
 - https://github.com/fouric/cl-termbox - Common Lisp Termbox wrapper
 - https://github.com/zyedidia/termbox-d - D Termbox wrapper
-
-## Bugs
-
-Report bugs to the https://github.com/tomas/termbox issue tracker.
 
 ## License
 
