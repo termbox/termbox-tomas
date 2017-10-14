@@ -157,10 +157,12 @@ enum {
 #define TB_BOLD      0x01000000
 #define TB_UNDERLINE 0x02000000
 #define TB_REVERSE   0x04000000
+#define TB_LIGHT     0x08000000
 #else
 #define TB_BOLD      0x0100
 #define TB_UNDERLINE 0x0200
 #define TB_REVERSE   0x0400
+#define TB_LIGHT     0x0800
 #endif
 
 /* A cell, single conceptual entity on the terminal screen. The terminal screen

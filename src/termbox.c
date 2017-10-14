@@ -60,7 +60,7 @@ static tb_color background = TB_DEFAULT;
 static tb_color foreground = TB_DEFAULT;
 
 static void write_cursor(int x, int y);
-static void write_sgr(tb_color fg, tb_color bg);
+static void write_sgr(tb_color fg, tb_color bg, int lighter_fg, int lighter_bg);
 static void write_title(const char * title);
 
 static void cellbuf_init(struct cellbuf *buf, int width, int height);
@@ -441,7 +441,7 @@ static void write_cursor(int x, int y) {
 	WRITE_LITERAL("H");
 }
 
-static void write_sgr(tb_color fg, tb_color bg) {
+static void write_sgr(tb_color fg, tb_color bg, int lighter_fg, int lighter_bg) {
 	char buf[32];
 
 	if (fg == TB_DEFAULT && bg == TB_DEFAULT)
@@ -487,14 +487,23 @@ static void write_sgr(tb_color fg, tb_color bg) {
 	default:
 		WRITE_LITERAL("\033[");
 		if (fg != TB_DEFAULT) {
-			WRITE_LITERAL("3");
+			if (lighter_fg) {
+				WRITE_LITERAL("9");
+			} else {
+				WRITE_LITERAL("3");
+			}
+
 			WRITE_INT(fg - 1);
 			if (bg != TB_DEFAULT) {
 				WRITE_LITERAL(";");
 			}
 		}
 		if (bg != TB_DEFAULT) {
-			WRITE_LITERAL("4");
+			if (lighter_bg) {
+				WRITE_LITERAL("10");
+			} else {
+				WRITE_LITERAL("4");
+			}
 			WRITE_INT(bg - 1);
 		}
 		WRITE_LITERAL("m");
@@ -613,7 +622,7 @@ static void send_attr(tb_color fg, tb_color bg) {
 		if ((fg & TB_REVERSE) || (bg & TB_REVERSE))
 			bytebuffer_puts(&output_buffer, funcs[T_REVERSE]);
 
-		write_sgr(fgcol, bgcol);
+		write_sgr(fgcol, bgcol, fg & TB_LIGHT, bg & TB_LIGHT);
 
 		lastfg = fg;
 		lastbg = bg;
