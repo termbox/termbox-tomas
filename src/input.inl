@@ -11,11 +11,66 @@ static bool starts_with(const char *s1, int len, const char *s2) {
   return *s2 == 0;
 }
 
+#ifdef __linux__
+
+#include <time.h>
+
+struct click {
+  int type;
+  int x;
+  int y;
+  struct timespec ts;
+};
+
+static int click_count = 1;
+static struct click last_click = { -1, -1, -1, { 0, 0 } };
+static double time_diff;
+
+static double get_timediff(struct timespec start, struct timespec end) {
+  return ((double)end.tv_sec + 1.0e-9 * end.tv_nsec) \
+    - ((double)start.tv_sec + 1.0e-9 * start.tv_nsec);
+}
+
+static bool is_double_click(int type, int x, int y) {
+  int res = false;
+
+  // if we have a recorded last click,
+  // and it matches the current's position and type (left/middle/right)
+  if (last_click.y != -1 && y == last_click.y && type == last_click.type) {
+
+    // then get the current time and its difference against the last one
+    struct timespec now = {0, 0};
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    time_diff = get_timediff(last_click.ts, now);
+
+    // and toggle the flag if it took less than 0.4 secs
+    res = time_diff < 0.4;
+  }
+
+  // store click for next check
+  last_click.x = x;
+  last_click.y = y;
+  last_click.type = type;
+  clock_gettime(CLOCK_MONOTONIC, &last_click.ts);
+
+  return res;
+}
+
+#else // TODO
+
+static bool is_double_click(int type, int x, int y) {
+  return false;
+}
+
+#endif
+
 static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
+
   if (len >= 6 && starts_with(buf, len, "\033[M")) {
     // X10 mouse encoding, the simplest one
     // \033 [ M Cb Cx Cy
     int b = buf[3] - 32;
+
     switch (b & 3) {
     case 0:
       if ((b & 64) != 0)
@@ -38,19 +93,26 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
     default:
       return -6;
     }
-    event->type = TB_EVENT_MOUSE; // TB_EVENT_KEY by default
-    // if ((b & 32) != 0)
-      // event->mod |= TB_MOD_MOTION;
 
-    // if (event->key != TB_KEY_MOUSE_RELEASE)
-      event->meta = (b >> 2) - 7;
+    event->type = TB_EVENT_MOUSE; // TB_EVENT_KEY by default
+    if ((b & 32) != 0) event->meta |= TB_META_MOTION;
 
     // the coord is 1,1 for upper left
     event->x = (uint8_t)buf[4] - 1 - 32;
     event->y = (uint8_t)buf[5] - 1 - 32;
 
+    if (event->key > TB_KEY_MOUSE_RELEASE) { // click
+      if (is_double_click(event->key, event->x, event->y)) {
+        event->ch = ++click_count;
+      } else {
+        event->ch = click_count = 1; // not double click. reset count
+      }
+    }
+
     return 6;
+
   } else if (starts_with(buf, len, "\033[<") || starts_with(buf, len, "\033[")) {
+
     // xterm 1006 extended mode or urxvt 1015 extended mode
     // xterm: \033 [ < Cb ; Cx ; Cy (M or m)
     // urxvt: \033 [ Cb ; Cx ; Cy M
@@ -59,10 +121,10 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
     int n1 = 0, n2 = 0, n3 = 0;
 
     for (i = 0; i < len; i++) {
+
       // We search the first (s1) and the last (s2) ';'
       if (buf[i] == ';') {
-        if (s1 == -1)
-          s1 = i;
+        if (s1 == -1) s1 = i;
         s2 = i;
       }
 
@@ -72,6 +134,7 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
         break;
       }
     }
+
     if (mi == -1)
       return 0;
 
@@ -121,20 +184,23 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
       return mi + 1;
     }
 
-    if (!isM) {
-      // on xterm mouse release is signaled by lowercase m
+    if (!isM) { // on xterm mouse release is signaled by lowercase m
       event->key = TB_KEY_MOUSE_RELEASE;
     }
 
-    event->type = TB_EVENT_MOUSE; // TB_EVENT_KEY by default
-    // if ((n1&32) != 0)
-      // event->mod |= TB_MOD_MOTION;
-
-    // if (event->key != TB_KEY_MOUSE_RELEASE)
-      event->meta = (n1 >> 2) - 7;
+    event->type = TB_EVENT_MOUSE;
+    if ((n1&32) != 0) event->meta |= TB_META_MOTION;
 
     event->x = (uint8_t)n2 - 1;
     event->y = (uint8_t)n3 - 1;
+
+    if (event->key > TB_KEY_MOUSE_RELEASE) { // click
+      if (is_double_click(event->key, event->x, event->y)) {
+        event->ch = ++click_count;
+      } else {
+        event->ch = click_count = 1; // not double click. reset count
+      }
+    }
 
     return mi + 1;
   }

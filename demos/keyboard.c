@@ -591,33 +591,30 @@ void pretty_print_resize(struct tb_event *ev)
 	tb_stringf(3, 19, TB_WHITE, TB_DEFAULT, "Resize event: %d x %d", ev->w, ev->h);
 }
 
-int counter = 0;
-
 void  pretty_print_mouse(struct tb_event *ev) {
 	tb_stringf(3, 19, TB_WHITE, TB_DEFAULT, "Mouse event: %d x %d", ev->x, ev->y);
 	char *btn = "";
 	switch (ev->key) {
 	case TB_KEY_MOUSE_LEFT:
-		btn = "MouseLeft: %d";
+		btn = "MouseLeft: %d    ";
 		break;
 	case TB_KEY_MOUSE_MIDDLE:
-		btn = "MouseMiddle: %d";
+		btn = "MouseMiddle: %d  ";
 		break;
 	case TB_KEY_MOUSE_RIGHT:
-		btn = "MouseRight: %d";
+		btn = "MouseRight: %d  ";
 		break;
 	case TB_KEY_MOUSE_WHEEL_UP:
-		btn = "MouseWheelUp: %d";
+		btn = "MouseWheelUp: %d  ";
 		break;
 	case TB_KEY_MOUSE_WHEEL_DOWN:
-		btn = "MouseWheelDown: %d";
+		btn = "MouseWheelDown: %d  ";
 		break;
 	case TB_KEY_MOUSE_RELEASE:
-		btn = "MouseRelease: %d";
+		btn = "MouseRelease: %d  ";
 	}
-	counter++;
 	tb_stringf(43, 19, TB_WHITE, TB_DEFAULT, "Key: ");
-	tb_stringf(48, 19, TB_YELLOW, TB_DEFAULT, btn, counter);
+	tb_stringf(48, 19, TB_YELLOW, TB_DEFAULT, btn, ev->ch);
 	tb_stringf(43, 20, TB_WHITE, TB_DEFAULT, "Meta: %d ", ev->meta);
 }
 

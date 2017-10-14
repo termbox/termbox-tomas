@@ -117,7 +117,8 @@ enum {
 	TB_META_CTRLSHIFT,
 	TB_META_ALTCTRL,
 	TB_META_ALTCTRLSHIFT,
-	TB_META_META
+	TB_META_META,
+	TB_META_MOTION  // for mouse events
 };
 
 /* These are non-existing ones.
@@ -126,15 +127,6 @@ enum {
  * #define TB_KEY_CTRL_9 clash with '9'
  * #define TB_KEY_CTRL_0 clash with '0'
  */
-
-/*
- * Alt modifier constant, see tb_event.mod field and tb_select_input_mode function.
- * Mouse-motion modifier
- */
-
-// we're not using these currently.
-// #define TB_MOD_ALT    0x01
-// #define TB_MOD_MOTION 0x02
 
 /* Colors (see struct tb_cell's fg and bg fields). */
 #define TB_DEFAULT 0x00
