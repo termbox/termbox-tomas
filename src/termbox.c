@@ -211,23 +211,40 @@ void tb_render(void) {
 
 	for (y = 0; y < front_buffer.height; ++y) {
 		for (x = 0; x < front_buffer.width; ) {
+
+			// get back and front cells for x/y position
 			back = &CELL(&back_buffer, x, y);
 			front = &CELL(&front_buffer, x, y);
+
+			// get width of char
 			w = wcwidth(back->ch);
 			if (w < 1) w = 1;
+
+			// if back cell hasn't changed, then skip to next one
 			if (memcmp(back, front, sizeof(struct tb_cell)) == 0) {
 				x += w;
 				continue;
 			}
+
+			// copy back cell to front and set attributes
 			memcpy(front, back, sizeof(struct tb_cell));
 			send_attr(back->fg, back->bg);
+
+			// if we have a wide char, but x position + char width would exceed screen width
 			if (w > 1 && x >= front_buffer.width - (w - 1)) {
-				// Not enough room for wide ch, so send spaces
+
+				// then fill with spaces, as we don't have enough room for wide ch
 				for (i = x; i < front_buffer.width; ++i) {
 					send_char(i, y, ' ');
 				}
+
+			// otherwise, if we have a regular char or if there's enough room
 			} else {
+
+				// then send the char
 				send_char(x, y, back->ch);
+
+				// and empty the following cells, if needed (wide char)
 				for (i = 1; i < w; ++i) {
 					front = &CELL(&front_buffer, x + i, y);
 					front->ch = 0;
