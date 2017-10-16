@@ -17,8 +17,8 @@ extern "C" {
 typedef uint32_t tb_color;
 #define LAST_ATTR_INIT 0xFFFFFFFF
 #else
-typedef uint8_t tb_color;
-#define LAST_ATTR_INIT 0xFF
+typedef uint16_t tb_color;
+#define LAST_ATTR_INIT 0xFFFF
 #endif
 
 /* Colors (see struct tb_cell's fg and bg fields). */
@@ -39,13 +39,13 @@ typedef uint8_t tb_color;
  */
 
 #ifdef WITH_TRUECOLOR
-#define TB_BOLD      0x010000
-#define TB_UNDERLINE 0x020000
-#define TB_REVERSE   0x040000
+#define TB_BOLD      0x01000000
+#define TB_UNDERLINE 0x02000000
+#define TB_REVERSE   0x04000000
 #else
-#define TB_BOLD      0x01
-#define TB_UNDERLINE 0x02
-#define TB_REVERSE   0x04
+#define TB_BOLD      0x0100
+#define TB_UNDERLINE 0x0400
+#define TB_REVERSE   0x0800
 #endif
 
 /* A cell, single conceptual entity on the terminal screen. The terminal screen
