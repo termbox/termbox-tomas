@@ -153,6 +153,7 @@ SO_IMPORT void tb_render(void);
  */
 
 SO_IMPORT uint8_t tb_rgb(uint32_t color);
+SO_IMPORT uint8_t tb_hex(const char * hex);
 
 #define TB_HIDE_CURSOR -1
 SO_IMPORT void tb_set_cursor(int cx, int cy);

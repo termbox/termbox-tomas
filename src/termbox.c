@@ -510,6 +510,10 @@ uint8_t tb_rgb(uint32_t color) {
   return 16 + (nums[0] * 36) + (nums[1] * 6) + nums[2];
 }
 
+uint8_t tb_rgb_hex(const char * hex) {
+	return tb_rgb(atoi(hex));
+}
+
 static void send_attr(tb_color fg, tb_color bg) {
 	static tb_color lastfg = LAST_ATTR_INIT,
 					        lastbg = LAST_ATTR_INIT;
