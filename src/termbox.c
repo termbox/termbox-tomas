@@ -514,6 +514,8 @@ uint8_t tb_rgb_hex(const char * hex) {
 	return tb_rgb(atoi(hex));
 }
 
+#define TB_UNSET 0x100
+
 static void send_attr(tb_color fg, tb_color bg) {
 	static tb_color lastfg = LAST_ATTR_INIT,
 					        lastbg = LAST_ATTR_INIT;
@@ -539,16 +541,15 @@ static void send_attr(tb_color fg, tb_color bg) {
 
 		case TB_OUTPUT_NORMAL:
 		default:
-			// TB_WHITE is 16, which is one bit higher than 0x0F
-			fgcol = fg == TB_WHITE ? TB_WHITE : fg & 0x0F;
-			bgcol = bg == TB_WHITE ? TB_WHITE : bg & 0x0F;
+			fgcol = fg == TB_DEFAULT ? TB_UNSET : fg & 0x0F;
+			bgcol = bg == TB_DEFAULT ? TB_UNSET : bg & 0x0F;
 		}
 
 		if (fg & TB_BOLD)
 			bytebuffer_puts(&output_buffer, funcs[T_BOLD]);
 
-		if (bg & TB_BOLD)
-			bytebuffer_puts(&output_buffer, funcs[T_BLINK]);
+		//if (bg & TB_BOLD)
+		//	bytebuffer_puts(&output_buffer, funcs[T_BLINK]);
 
 		if (fg & TB_UNDERLINE)
 			bytebuffer_puts(&output_buffer, funcs[T_UNDERLINE]);
@@ -592,7 +593,7 @@ static void write_cursor(int x, int y) {
 }
 
 static void write_sgr(tb_color fg, tb_color bg) {
-	if (fg == TB_DEFAULT && bg == TB_DEFAULT)
+	if ((fg == TB_DEFAULT && bg == TB_DEFAULT) || (fg == TB_UNSET && bg == TB_UNSET))
 		return;
 
 	char buf[32];
@@ -624,11 +625,7 @@ static void write_sgr(tb_color fg, tb_color bg) {
 	case TB_OUTPUT_256:
 		if (fg != TB_DEFAULT) {
 			WRITE_LITERAL("38;5;");
-			if (fg <= 16) {
-				WRITE_INT(fg - 1);
-			} else {
-				WRITE_INT(fg);
-			}
+			WRITE_INT(fg);
 
 			if (bg != TB_DEFAULT) {
 				WRITE_LITERAL(";");
@@ -636,11 +633,7 @@ static void write_sgr(tb_color fg, tb_color bg) {
 		}
 		if (bg != TB_DEFAULT) {
 			WRITE_LITERAL("48;5;");
-			if (bg <= 16) {
-				WRITE_INT(bg - 1);
-			} else {
-				WRITE_INT(bg);
-			}
+			WRITE_INT(bg);
 		}
 		break;
 
@@ -654,27 +647,26 @@ static void write_sgr(tb_color fg, tb_color bg) {
 	// 8-15  1;9(N-8)m  1;9(N-8)m
 	case TB_OUTPUT_NORMAL:
 	default:
-		if (fg != TB_DEFAULT) {
-			if (fg > 8) { // upper 8
+		if (fg != TB_UNSET) {
+			if (fg > 7) { // upper 8
 				WRITE_LITERAL("1;3");
-				WRITE_INT(fg - 9);
+				WRITE_INT(fg - 8);
 			} else {
 				WRITE_LITERAL("3");
-				WRITE_INT(fg - 1);
+				WRITE_INT(fg);
 			}
 
-			if (bg != TB_DEFAULT)
+			if (bg != TB_UNSET)
 				WRITE_LITERAL(";");
 		}
 
-		if (bg != TB_DEFAULT) {
-			if (bg > 8) { // upper 8
-				// WRITE_LITERAL("1;4");
-				WRITE_LITERAL("10");
-				WRITE_INT(bg - 9);
+		if (bg != TB_UNSET) {
+			if (bg > 7) { // upper 8
+				WRITE_LITERAL("10"); // "1;4"
+				WRITE_INT(bg - 8);
 			} else {
 				WRITE_LITERAL("4");
-				WRITE_INT(bg - 1);
+				WRITE_INT(bg);
 			}
 		}
 
@@ -687,7 +679,6 @@ static void write_sgr(tb_color fg, tb_color bg) {
 static void write_title(const char * title) {
 	tb_sendf("%c]0;%s%c\n", '\033', title, '\007');
 }
-
 
 static void send_char(int x, int y, uint32_t c) {
 	char buf[7];

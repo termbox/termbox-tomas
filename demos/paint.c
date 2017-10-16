@@ -7,6 +7,7 @@ static int curCol = 0;
 static int curRune = 4;
 static struct tb_cell *backbuf;
 static int bbw = 0, bbh = 0;
+static int current_mode;
 
 static const tb_chr runes[] = {
   0x20,   // ' '
@@ -26,15 +27,20 @@ static const tb_color colors[] = {
   TB_BLUE,
   TB_MAGENTA,
   TB_CYAN,
-  TB_LIGHT_GRAY,
-  TB_DARK_GRAY,
   TB_LIGHT_RED,
   TB_LIGHT_GREEN,
   TB_LIGHT_YELLOW,
   TB_LIGHT_BLUE,
   TB_LIGHT_MAGENTA,
   TB_LIGHT_CYAN,
-  TB_WHITE
+  TB_WHITE,
+  TB_LIGHTEST_GRAY,
+  TB_LIGHTER_GRAY,
+  TB_LIGHT_GRAY,
+  TB_MEDIUM_GRAY,
+  TB_DARK_GRAY,
+  TB_DARKER_GRAY,
+  TB_DARKEST_GRAY,
 };
 
 void updateAndDrawButtons(int *current, int x, int y, int mx, int my, int n, void (*attrFunc)(int, tb_chr*, tb_color*, tb_color*)) {
@@ -95,6 +101,7 @@ void updateAndRedrawAll(int mx, int my) {
   memcpy(tb_cell_buffer(), backbuf, sizeof(struct tb_cell)*bbw*bbh);
   updateAndDrawButtons(&curRune, 0, 0, mx, my, len(runes), runeAttrFunc);
   updateAndDrawButtons(&curCol, 0, h-3, mx, my, len(colors), colorAttrFunc);
+
   tb_render();
 }
 
@@ -105,6 +112,15 @@ void reallocBackBuffer(int w, int h) {
   backbuf = calloc(sizeof(struct tb_cell), w*h);
 }
 
+void toggle_mode() {
+  if (current_mode == TB_OUTPUT_256)
+    current_mode = tb_select_output_mode(TB_OUTPUT_NORMAL);
+  else
+    current_mode = tb_select_output_mode(TB_OUTPUT_256);
+
+  printf("Current mode: %d", current_mode);
+}
+
 int main(void) {
   int code = tb_init();
   if (code < 0) {
@@ -112,8 +128,8 @@ int main(void) {
     return -1;
   }
 
+  toggle_mode();
   tb_enable_mouse();
-  // tb_select_output_mode(TB_OUTPUT_256);
   int w = tb_width();
   int h = tb_height();
   reallocBackBuffer(w, h);
@@ -135,19 +151,25 @@ int main(void) {
       if (ev.key == TB_KEY_ESC) {
         tb_shutdown();
         return 0;
+      } else if (ev.ch == 'm') {
+        toggle_mode();
       }
+
       break;
+
     case TB_EVENT_MOUSE:
       if (ev.key == TB_KEY_MOUSE_LEFT) {
         mx = ev.x;
         my = ev.y;
       }
       break;
+
     case TB_EVENT_RESIZE:
       tb_resize();
       reallocBackBuffer(ev.w, ev.h);
       break;
     }
+
     updateAndRedrawAll(mx, my);
   }
 }

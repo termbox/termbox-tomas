@@ -7,7 +7,7 @@ int main(void) {
   }
 
   // set up our colors and test string
-  int bg_color = TB_DEFAULT;
+  int bg_color = TB_GREEN;
   int fg_color = TB_DEFAULT;
 
   // get the screen resolution

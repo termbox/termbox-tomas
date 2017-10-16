@@ -22,27 +22,41 @@ typedef uint16_t tb_color;
 #endif
 
 /* Colors (see struct tb_cell's fg and bg fields). */
-#define TB_DEFAULT       0x00
-#define TB_BLACK         0x01
-#define TB_RED           0x02
-#define TB_GREEN         0x03
-#define TB_YELLOW        0x04
-#define TB_BLUE          0x05
-#define TB_MAGENTA       0x06
-#define TB_CYAN          0x07
-#define TB_LIGHT_GRAY    0x08
-#define TB_DARK_GRAY     0x09
-#define TB_LIGHT_RED     0x0A
-#define TB_LIGHT_GREEN   0x0B
-#define TB_LIGHT_YELLOW  0x0C
-#define TB_LIGHT_BLUE    0x0D
-#define TB_LIGHT_MAGENTA 0x0E
-#define TB_LIGHT_CYAN    0x0F
-#define TB_WHITE         0x10
 
-// allow using 'grey' with E's
-#define TB_LIGHT_GREY    0x08
-#define TB_DARK_GREY     0x09
+#define TB_DEFAULT       0x00
+
+#define TB_RED           0x01
+#define TB_GREEN         0x02
+#define TB_YELLOW        0x03
+#define TB_BLUE          0x04
+#define TB_MAGENTA       0x05
+#define TB_CYAN          0x06
+#define TB_LIGHT_GRAY    0x07
+#define TB_MEDIUM_GRAY   0x08
+#define TB_LIGHT_RED     0x09
+#define TB_LIGHT_GREEN   0x0A
+#define TB_LIGHT_YELLOW  0x0B
+#define TB_LIGHT_BLUE    0x0C
+#define TB_LIGHT_MAGENTA 0x0D
+#define TB_LIGHT_CYAN    0x0E
+#define TB_WHITE         0x0F
+#define TB_BLACK         0x10
+
+#define TB_DARKEST_GRAY      234
+#define TB_DARKER_GRAY       236
+#define TB_DARK_GRAY         241
+// #define TB_MEDIUM_GRAY     0x08
+// #define TB_LIGHT_GRAY      0x07
+#define TB_LIGHTER_GRAY      251
+#define TB_LIGHTEST_GRAY     254
+
+#define TB_DARKEST_GREY      234
+#define TB_DARKER_GREY       236
+#define TB_DARK_GREY         241
+#define TB_MEDIUM_GREY       0x08
+#define TB_LIGHT_GREY        0x07
+#define TB_LIGHTER_GREY      251
+#define TB_LIGHTEST_GREY     254
 
 /* Attributes, it is possible to use multiple attributes by combining them
  * using bitwise OR ('|'). Although, colors cannot be combined. But you can
@@ -52,12 +66,16 @@ typedef uint16_t tb_color;
 
 #ifdef WITH_TRUECOLOR
 #define TB_BOLD      0x01000000
-#define TB_UNDERLINE 0x02000000
-#define TB_REVERSE   0x04000000
+#define TB_UNDERLINE 0x04000000
+#define TB_REVERSE   0x08000000
+// #define TB_ITALIC    0x03000000
+// #define TB_STRIKE    0x09000000
 #else
 #define TB_BOLD      0x0100
 #define TB_UNDERLINE 0x0400
 #define TB_REVERSE   0x0800
+// #define TB_ITALIC    0x0300
+// #define TB_STRIKE    0x0900
 #endif
 
 /* A cell, single conceptual entity on the terminal screen. The terminal screen
