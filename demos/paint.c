@@ -113,7 +113,7 @@ int main(void) {
   }
 
   tb_enable_mouse();
-  tb_select_output_mode(TB_OUTPUT_256);
+  // tb_select_output_mode(TB_OUTPUT_256);
   int w = tb_width();
   int h = tb_height();
   reallocBackBuffer(w, h);

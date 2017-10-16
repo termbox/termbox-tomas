@@ -529,14 +529,14 @@ static void send_attr(tb_color fg, tb_color bg) {
 #endif
 
 		case TB_OUTPUT_256:
-			fgcol = fg & 0x0100 ? (fg - 0x0100) : fg & 0xFF;
-			bgcol = bg & 0x0100 ? (bg - 0x0100) : bg & 0xFF;
+			fgcol = fg & 0xFF;
+			bgcol = bg & 0xFF;
 			break;
 
 		case TB_OUTPUT_NORMAL:
 		default:
-			fgcol = fg & 0x0100 ? (fg - 0x0100) : fg;
-			bgcol = bg & 0x0100 ? (bg - 0x0100) : bg;
+			fgcol = fg; // & 0x0F;
+			bgcol = bg; // & 0x0F;
 		}
 
 		if (fg & TB_BOLD)
@@ -619,14 +619,23 @@ static void write_sgr(tb_color fg, tb_color bg) {
 	case TB_OUTPUT_256:
 		if (fg != TB_DEFAULT) {
 			WRITE_LITERAL("38;5;");
-			WRITE_INT(fg);
+			if (fg <= 16) {
+				WRITE_INT(fg - 1);
+			} else {
+				WRITE_INT(fg);
+			}
+
 			if (bg != TB_DEFAULT) {
 				WRITE_LITERAL(";");
 			}
 		}
 		if (bg != TB_DEFAULT) {
 			WRITE_LITERAL("48;5;");
-			WRITE_INT(bg);
+			if (bg <= 16) {
+				WRITE_INT(bg - 1);
+			} else {
+				WRITE_INT(bg);
+			}
 		}
 		break;
 
@@ -641,12 +650,12 @@ static void write_sgr(tb_color fg, tb_color bg) {
 	case TB_OUTPUT_NORMAL:
 	default:
 		if (fg != TB_DEFAULT) {
-			if (fg > 7) { // upper 8
+			if (fg > 8) { // upper 8
 				WRITE_LITERAL("1;3");
-				WRITE_INT(fg - 8);
+				WRITE_INT(fg - 9);
 			} else {
 				WRITE_LITERAL("3");
-				WRITE_INT(fg);
+				WRITE_INT(fg - 1);
 			}
 
 			if (bg != TB_DEFAULT)
@@ -654,13 +663,13 @@ static void write_sgr(tb_color fg, tb_color bg) {
 		}
 
 		if (bg != TB_DEFAULT) {
-			if (bg > 7) { // upper 8
+			if (bg > 8) { // upper 8
 				// WRITE_LITERAL("1;4");
 				WRITE_LITERAL("10");
-				WRITE_INT(bg - 8);
+				WRITE_INT(bg - 9);
 			} else {
 				WRITE_LITERAL("4");
-				WRITE_INT(bg);
+				WRITE_INT(bg - 1);
 			}
 		}
 

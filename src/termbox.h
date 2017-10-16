@@ -22,28 +22,27 @@ typedef uint16_t tb_color;
 #endif
 
 /* Colors (see struct tb_cell's fg and bg fields). */
-#define TB_DEFAULT       0x0000
-
-#define TB_BLACK         0x0101
-#define TB_RED           0x0102
-#define TB_GREEN         0x0103
-#define TB_YELLOW        0x0104
-#define TB_BLUE          0x0105
-#define TB_MAGENTA       0x0106
-#define TB_CYAN          0x0107
-#define TB_LIGHT_GRAY    0x0108
-#define TB_DARK_GRAY     0x0109
-#define TB_LIGHT_RED     0x010A
-#define TB_LIGHT_GREEN   0x010B
-#define TB_LIGHT_YELLOW  0x010C
-#define TB_LIGHT_BLUE    0x010D
-#define TB_LIGHT_MAGENTA 0x010E
-#define TB_LIGHT_CYAN    0x010F
-#define TB_WHITE         0x0110
+#define TB_DEFAULT       0x00
+#define TB_BLACK         0x01
+#define TB_RED           0x02
+#define TB_GREEN         0x03
+#define TB_YELLOW        0x04
+#define TB_BLUE          0x05
+#define TB_MAGENTA       0x06
+#define TB_CYAN          0x07
+#define TB_LIGHT_GRAY    0x08
+#define TB_DARK_GRAY     0x09
+#define TB_LIGHT_RED     0x0A
+#define TB_LIGHT_GREEN   0x0B
+#define TB_LIGHT_YELLOW  0x0C
+#define TB_LIGHT_BLUE    0x0D
+#define TB_LIGHT_MAGENTA 0x0E
+#define TB_LIGHT_CYAN    0x0F
+#define TB_WHITE         0x10
 
 // allow using 'grey' with E's
-#define TB_LIGHT_GREY    0x0108
-#define TB_DARK_GREY     0x0109
+#define TB_LIGHT_GREY    0x08
+#define TB_DARK_GREY     0x09
 
 /* Attributes, it is possible to use multiple attributes by combining them
  * using bitwise OR ('|'). Although, colors cannot be combined. But you can
