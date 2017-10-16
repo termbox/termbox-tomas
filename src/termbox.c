@@ -664,7 +664,6 @@ static void send_attr(tb_color fg, tb_color bg) {
 			bytebuffer_puts(&output_buffer, funcs[T_UNDERLINE]);
 
 		if ((fg & TB_REVERSE) || (bg & TB_REVERSE)) {
-			printf("REVERSE!\n");
 			bytebuffer_puts(&output_buffer, funcs[T_REVERSE]);
 		}
 
