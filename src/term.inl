@@ -1,3 +1,13 @@
+
+// [0m sgr0   Reset all attributes
+// [1m bold   Set "bright" attribute
+// [2m dim    Set "dim" attribute
+// [3m smso   Set "standout" attribute
+// [4m set    Set "underscore" (underlined text) attribute
+// [5m blink  Set "blink" attribute
+// [7m rev    Set "reverse" attribute
+// [8m invis  Set "hidden" attribute
+
 enum {
   T_ENTER_CA,
   T_EXIT_CA,

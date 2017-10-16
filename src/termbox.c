@@ -172,7 +172,7 @@ void tb_shutdown(void) {
 
 	if (title_set) write_title("");
 	tb_show_cursor();
-	bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
+	bytebuffer_puts(&output_buffer, funcs[T_SGR0]); // reset attrs
 
 	if (initflags & TB_INIT_ALTSCREEN) {
 	  bytebuffer_puts(&output_buffer, funcs[T_EXIT_CA]);
@@ -519,7 +519,7 @@ static void send_attr(tb_color fg, tb_color bg) {
 					        lastbg = LAST_ATTR_INIT;
 
 	if (fg != lastfg || bg != lastbg) {
-		bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
+		bytebuffer_puts(&output_buffer, funcs[T_SGR0]); // reset attrs
 
 		tb_color fgcol;
 		tb_color bgcol;
@@ -539,8 +539,9 @@ static void send_attr(tb_color fg, tb_color bg) {
 
 		case TB_OUTPUT_NORMAL:
 		default:
-			fgcol = fg; // & 0x0F;
-			bgcol = bg; // & 0x0F;
+			// TB_WHITE is 16, which is one bit higher than 0x0F
+			fgcol = fg == TB_WHITE ? TB_WHITE : fg & 0x0F;
+			bgcol = bg == TB_WHITE ? TB_WHITE : bg & 0x0F;
 		}
 
 		if (fg & TB_BOLD)
