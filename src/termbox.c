@@ -500,6 +500,7 @@ static void write_sgr(tb_color fg, tb_color bg, int lighter_fg, int lighter_bg) 
 		}
 		WRITE_LITERAL("m");
 		break;
+
 	case TB_OUTPUT_NORMAL:
 	default:
 		WRITE_LITERAL("\033[");
@@ -587,6 +588,31 @@ static void update_term_size(void) {
 	termh = sz.ws_row;
 }
 
+// int levels = { 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff };
+static int steps[6] = { 47, 115, 155, 195, 235, 256 }; // in between of each level
+
+static int get_256_value(tb_color color) {
+
+	// extract rgb values from number (e.g. 0xffcc00 -> 16763904)
+	int rgb[3] = { 0, 0, 0 }; // r, g, b
+	rgb[0] = (color >> 16) & 0xFF; // e.g. 255
+	rgb[1] = (color >> 8)  & 0xFF; // e.g. 204
+	rgb[2] = (color >> 0)  & 0xFF; // e.g. 0
+
+	int nums[3] = { 0, 0, 0 }; // rgb to their most similar value between the 0-5 range
+	for (int c = 0; c < 3; c++) {
+	  for (int i = 0; i < 6; i++) {
+	    if (steps[i] > rgb[c]) {
+	    	nums[c] = i;
+	    	break;
+	    }
+	  }
+	}
+
+  // 16 + (r * 36) + (g * 6) + b
+  return 16 + (nums[0] * 36) + (nums[1] * 6) + nums[2];
+}
+
 static void send_attr(tb_color fg, tb_color bg) {
 	static tb_color lastfg = LAST_ATTR_INIT,
 					        lastbg = LAST_ATTR_INIT;
@@ -606,8 +632,8 @@ static void send_attr(tb_color fg, tb_color bg) {
 #endif
 
 		case TB_OUTPUT_256:
-			fgcol = fg & 0xFF;
-			bgcol = bg & 0xFF;
+			fgcol = get_256_value(fg); // some number between 16 (first color set) and 255
+			bgcol = get_256_value(bg);
 			break;
 
 		case TB_OUTPUT_216:
