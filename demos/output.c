@@ -54,28 +54,8 @@ static void draw_all() {
 	print_combinations_table(2 + strlen(chars), 1, col2, 1);
 	tb_render();
 
-	tb_select_output_mode(TB_OUTPUT_GRAYSCALE);
-	int c, x, y;
-	for (x = 0, y = 23; x < 24; ++x) {
-		tb_char(x, y, x, 0, '@');
-		tb_char(x+25, y, 0, x, ' ');
-	}
-	tb_render();
-
-	tb_select_output_mode(TB_OUTPUT_216);
-	y++;
-	for (c = 0, x = 0; c < 216; ++c, ++x) {
-		if (!(x%24)) {
-			x = 0;
-			++y;
-		}
-		tb_char(x, y, c, 0, '@');
-		tb_char(x+25, y, 0, c, ' ');
-	}
-
-	tb_render();
+	int c, x, y = 24;
 	tb_select_output_mode(TB_OUTPUT_256);
-	y++;
 
 	for (c = 0, x = 0; c < 256; ++c, ++x) {
 		if (!(x%24)) {

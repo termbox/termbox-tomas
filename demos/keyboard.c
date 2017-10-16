@@ -7,7 +7,7 @@
 struct key {
 	unsigned char x;
 	unsigned char y;
-	tb_color ch;
+	uint32_t ch;
 };
 
 #define STOP {0,0,0}

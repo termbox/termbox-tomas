@@ -60,7 +60,7 @@ static tb_color background = TB_DEFAULT;
 static tb_color foreground = TB_DEFAULT;
 
 static void write_cursor(int x, int y);
-static void write_sgr(tb_color fg, tb_color bg, int lighter_fg, int lighter_bg);
+static void write_sgr(tb_color fg, tb_color bg);
 static void write_title(const char * title);
 
 static void cellbuf_init(struct cellbuf *buf, int width, int height);
@@ -429,7 +429,7 @@ void tb_resize(void) {
 
 /* -------------------------------------------------------- */
 
-static int convertnum(uint32_t num, char* buf) {
+static int convertnum(uint8_t num, char* buf) {
 	int i, l = 0;
 	int ch;
 	do {
@@ -458,35 +458,37 @@ static void write_cursor(int x, int y) {
 	WRITE_LITERAL("H");
 }
 
-static void write_sgr(tb_color fg, tb_color bg, int lighter_fg, int lighter_bg) {
-	char buf[32];
-
+static void write_sgr(tb_color fg, tb_color bg) {
 	if (fg == TB_DEFAULT && bg == TB_DEFAULT)
 		return;
+
+	char buf[32];
+	WRITE_LITERAL("\033[");
 
 	switch (outputmode) {
 #ifdef WITH_TRUECOLOR
 	case TB_OUTPUT_TRUECOLOR:
-		WRITE_LITERAL("\033[38;2;");
-		WRITE_INT(fg >> 16 & 0xFF);
+		WRITE_LITERAL("38;2;");
+		WRITE_INT(fg >> 16 & 0xFF); // fg R
 		WRITE_LITERAL(";");
-		WRITE_INT(fg >> 8 & 0xFF);
+		WRITE_INT(fg >> 8 & 0xFF);  // fg G
 		WRITE_LITERAL(";");
-		WRITE_INT(fg & 0xFF);
+		WRITE_INT(fg & 0xFF);       // fg B
 		WRITE_LITERAL(";48;2;");
-		WRITE_INT(bg >> 16 & 0xFF);
+		WRITE_INT(bg >> 16 & 0xFF); // bg R
 		WRITE_LITERAL(";");
-		WRITE_INT(bg >> 8 & 0xFF);
+		WRITE_INT(bg >> 8 & 0xFF);  // bg G
 		WRITE_LITERAL(";");
-		WRITE_INT(bg & 0xFF);
-		WRITE_LITERAL("m");
+		WRITE_INT(bg & 0xFF);       // bg B
 		break;
 #endif
 
+	// 16 color ISO
+	// num      fg          bg
+	// 0-15     [38;5;(N)m  [48;5;(N)m -- 16 ANSI colors
+	// 16-231   [38;5;(N)m  [48;5;(N)m -- 6x6x6 RGB
+	// 232-255  [38;5;(N)m  [48;5;(N)m -- 24 grayscale
 	case TB_OUTPUT_256:
-	case TB_OUTPUT_216:
-	case TB_OUTPUT_GRAYSCALE:
-		WRITE_LITERAL("\033[");
 		if (fg != TB_DEFAULT) {
 			WRITE_LITERAL("38;5;");
 			WRITE_INT(fg);
@@ -498,35 +500,45 @@ static void write_sgr(tb_color fg, tb_color bg, int lighter_fg, int lighter_bg) 
 			WRITE_LITERAL("48;5;");
 			WRITE_INT(bg);
 		}
-		WRITE_LITERAL("m");
 		break;
 
+	// 16 color ISO
+	// num   fg         bg
+	// 0-7   3(N)m      4(N)m
+	// 8-15  1;3(N-8)m  1;4(N-8)m
+
+	// in bold
+	// 0-7   9(N)m      10(N)m
+	// 8-15  1;9(N-8)m  1;9(N-8)m
 	case TB_OUTPUT_NORMAL:
 	default:
-		WRITE_LITERAL("\033[");
 		if (fg != TB_DEFAULT) {
-			if (lighter_fg) {
-				WRITE_LITERAL("9");
+			if (fg > 8) { // upper 8
+				WRITE_LITERAL("1;3");
+				WRITE_INT(fg - 9);
 			} else {
 				WRITE_LITERAL("3");
+				WRITE_INT(fg - 1);
 			}
 
-			WRITE_INT(fg - 1);
-			if (bg != TB_DEFAULT) {
+			if (bg != TB_DEFAULT)
 				WRITE_LITERAL(";");
-			}
 		}
+
 		if (bg != TB_DEFAULT) {
-			if (lighter_bg) {
-				WRITE_LITERAL("10");
+			if (bg > 8) { // upper 8
+				WRITE_LITERAL("1;4");
+				WRITE_INT(bg - 9);
 			} else {
 				WRITE_LITERAL("4");
+				WRITE_INT(bg - 1);
 			}
-			WRITE_INT(bg - 1);
 		}
-		WRITE_LITERAL("m");
+
 		break;
 	}
+
+	WRITE_LITERAL("m");
 }
 
 static void write_title(const char * title) {
@@ -591,10 +603,10 @@ static void update_term_size(void) {
 // int levels = { 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff };
 static int steps[6] = { 47, 115, 155, 195, 235, 256 }; // in between of each level
 
-static int get_256_value(tb_color color) {
+uint8_t tb_rgb(uint32_t color) {
 
 	// extract rgb values from number (e.g. 0xffcc00 -> 16763904)
-	int rgb[3] = { 0, 0, 0 }; // r, g, b
+	uint8_t rgb[3] = { 0, 0, 0 }; // r, g, b
 	rgb[0] = (color >> 16) & 0xFF; // e.g. 255
 	rgb[1] = (color >> 8)  & 0xFF; // e.g. 204
 	rgb[2] = (color >> 0)  & 0xFF; // e.g. 0
@@ -632,22 +644,8 @@ static void send_attr(tb_color fg, tb_color bg) {
 #endif
 
 		case TB_OUTPUT_256:
-			fgcol = get_256_value(fg); // some number between 16 (first color set) and 255
-			bgcol = get_256_value(bg);
-			break;
-
-		case TB_OUTPUT_216:
-			fgcol = fg & 0xFF; if (fgcol > 215) fgcol = 7;
-			bgcol = bg & 0xFF; if (bgcol > 215) bgcol = 0;
-			fgcol += 0x10;
-			bgcol += 0x10;
-			break;
-
-		case TB_OUTPUT_GRAYSCALE:
-			fgcol = fg & 0xFF; if (fgcol > 23) fgcol = 23;
-			bgcol = bg & 0xFF; if (bgcol > 23) bgcol = 0;
-			fgcol += 0xe8;
-			bgcol += 0xe8;
+			fgcol = fg & 0xFF;
+			bgcol = bg & 0xFF;
 			break;
 
 		case TB_OUTPUT_NORMAL:
@@ -658,14 +656,17 @@ static void send_attr(tb_color fg, tb_color bg) {
 
 		if (fg & TB_BOLD)
 			bytebuffer_puts(&output_buffer, funcs[T_BOLD]);
+
 		if (bg & TB_BOLD)
 			bytebuffer_puts(&output_buffer, funcs[T_BLINK]);
+
 		if (fg & TB_UNDERLINE)
 			bytebuffer_puts(&output_buffer, funcs[T_UNDERLINE]);
+
 		if ((fg & TB_REVERSE) || (bg & TB_REVERSE))
 			bytebuffer_puts(&output_buffer, funcs[T_REVERSE]);
 
-		write_sgr(fgcol, bgcol, fg & TB_LIGHT, bg & TB_LIGHT);
+		write_sgr(fgcol, bgcol);
 
 		lastfg = fg;
 		lastbg = bg;
@@ -676,8 +677,9 @@ static void send_char(int x, int y, uint32_t c) {
 	char buf[7];
 	int bw = tb_utf8_unicode_to_char(buf, c);
 
-	if (x-1 != lastx || y != lasty)
+	if (x-1 != lastx || y != lasty) {
 		write_cursor(x, y);
+	}
 
 	lastx = x; lasty = y;
 	if (!c) buf[0] = ' '; // replace 0 with whitespace
