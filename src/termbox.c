@@ -429,6 +429,134 @@ void tb_resize(void) {
 
 /* -------------------------------------------------------- */
 
+static void cellbuf_init(struct cellbuf *buf, int width, int height) {
+	buf->cells = (struct tb_cell*)malloc(sizeof(struct tb_cell) * width * height);
+	assert(buf->cells);
+	buf->width = width;
+	buf->height = height;
+}
+
+static void cellbuf_resize(struct cellbuf *buf, int width, int height) {
+	if (buf->width == width && buf->height == height)
+		return;
+
+	int oldw = buf->width;
+	int oldh = buf->height;
+	struct tb_cell *oldcells = buf->cells;
+
+	cellbuf_init(buf, width, height);
+	cellbuf_clear(buf);
+
+	int minw = (width < oldw) ? width : oldw;
+	int minh = (height < oldh) ? height : oldh;
+	int i;
+
+	for (i = 0; i < minh; ++i) {
+		struct tb_cell *csrc = oldcells + (i * oldw);
+		struct tb_cell *cdst = buf->cells + (i * width);
+		memcpy(cdst, csrc, sizeof(struct tb_cell) * minw);
+	}
+
+	free(oldcells);
+}
+
+static void cellbuf_clear(struct cellbuf *buf) {
+	int i;
+	int ncells = buf->width * buf->height;
+
+	for (i = 0; i < ncells; ++i) {
+		buf->cells[i].ch = ' ';
+		buf->cells[i].fg = foreground;
+		buf->cells[i].bg = background;
+	}
+}
+
+static void cellbuf_free(struct cellbuf *buf) {
+	free(buf->cells);
+}
+
+static void update_term_size(void) {
+	struct winsize sz;
+	memset(&sz, 0, sizeof(sz));
+	ioctl(inout, TIOCGWINSZ, &sz);
+
+	termw = sz.ws_col;
+	termh = sz.ws_row;
+}
+
+// int levels = { 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff };
+static int steps[6] = { 47, 115, 155, 195, 235, 256 }; // in between of each level
+
+uint8_t tb_rgb(uint32_t color) {
+
+	// extract rgb values from number (e.g. 0xffcc00 -> 16763904)
+	uint8_t rgb[3] = { 0, 0, 0 }; // r, g, b
+	rgb[0] = (color >> 16) & 0xFF; // e.g. 255
+	rgb[1] = (color >> 8)  & 0xFF; // e.g. 204
+	rgb[2] = (color >> 0)  & 0xFF; // e.g. 0
+
+	// now, translate rgb to their most similar value between the 0-5 range
+	int nums[3] = { 0, 0, 0 };
+	for (int c = 0; c < 3; c++) {
+	  for (int i = 0; i < 6; i++) {
+	    if (steps[i] > rgb[c]) {
+	    	nums[c] = i;
+	    	break;
+	    }
+	  }
+	}
+
+  // 16 + (r * 36) + (g * 6) + b
+  return 16 + (nums[0] * 36) + (nums[1] * 6) + nums[2];
+}
+
+static void send_attr(tb_color fg, tb_color bg) {
+	static tb_color lastfg = LAST_ATTR_INIT,
+					        lastbg = LAST_ATTR_INIT;
+
+	if (fg != lastfg || bg != lastbg) {
+		bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
+
+		tb_color fgcol;
+		tb_color bgcol;
+
+		switch (outputmode) {
+#ifdef WITH_TRUECOLOR
+		case TB_OUTPUT_TRUECOLOR:
+			fgcol = fg;
+			bgcol = bg;
+			break;
+#endif
+
+		case TB_OUTPUT_256:
+			fgcol = fg & 0x0100 ? (fg - 0x0100) : fg & 0xFF;
+			bgcol = bg & 0x0100 ? (bg - 0x0100) : bg & 0xFF;
+			break;
+
+		case TB_OUTPUT_NORMAL:
+		default:
+			fgcol = fg & 0x0100 ? (fg - 0x0100) : fg;
+			bgcol = bg & 0x0100 ? (bg - 0x0100) : bg;
+		}
+
+		if (fg & TB_BOLD)
+			bytebuffer_puts(&output_buffer, funcs[T_BOLD]);
+
+		if (bg & TB_BOLD)
+			bytebuffer_puts(&output_buffer, funcs[T_BLINK]);
+
+		if (fg & TB_UNDERLINE)
+			bytebuffer_puts(&output_buffer, funcs[T_UNDERLINE]);
+
+		if ((fg & TB_REVERSE) || (bg & TB_REVERSE))
+			bytebuffer_puts(&output_buffer, funcs[T_REVERSE]);
+
+		write_sgr(fgcol, bgcol);
+		lastfg = fg;
+		lastbg = bg;
+	}
+}
+
 static int convertnum(uint8_t num, char* buf) {
 	int i, l = 0;
 	int ch;
@@ -513,12 +641,12 @@ static void write_sgr(tb_color fg, tb_color bg) {
 	case TB_OUTPUT_NORMAL:
 	default:
 		if (fg != TB_DEFAULT) {
-			if (fg > 8) { // upper 8
+			if (fg > 7) { // upper 8
 				WRITE_LITERAL("1;3");
-				WRITE_INT(fg - 9);
+				WRITE_INT(fg - 8);
 			} else {
 				WRITE_LITERAL("3");
-				WRITE_INT(fg - 1);
+				WRITE_INT(fg);
 			}
 
 			if (bg != TB_DEFAULT)
@@ -526,12 +654,13 @@ static void write_sgr(tb_color fg, tb_color bg) {
 		}
 
 		if (bg != TB_DEFAULT) {
-			if (bg > 8) { // upper 8
-				WRITE_LITERAL("1;4");
-				WRITE_INT(bg - 9);
+			if (bg > 7) { // upper 8
+				// WRITE_LITERAL("1;4");
+				WRITE_LITERAL("10");
+				WRITE_INT(bg - 8);
 			} else {
 				WRITE_LITERAL("4");
-				WRITE_INT(bg - 1);
+				WRITE_INT(bg);
 			}
 		}
 
@@ -545,132 +674,6 @@ static void write_title(const char * title) {
 	tb_sendf("%c]0;%s%c\n", '\033', title, '\007');
 }
 
-static void cellbuf_init(struct cellbuf *buf, int width, int height) {
-	buf->cells = (struct tb_cell*)malloc(sizeof(struct tb_cell) * width * height);
-	assert(buf->cells);
-	buf->width = width;
-	buf->height = height;
-}
-
-static void cellbuf_resize(struct cellbuf *buf, int width, int height) {
-	if (buf->width == width && buf->height == height)
-		return;
-
-	int oldw = buf->width;
-	int oldh = buf->height;
-	struct tb_cell *oldcells = buf->cells;
-
-	cellbuf_init(buf, width, height);
-	cellbuf_clear(buf);
-
-	int minw = (width < oldw) ? width : oldw;
-	int minh = (height < oldh) ? height : oldh;
-	int i;
-
-	for (i = 0; i < minh; ++i) {
-		struct tb_cell *csrc = oldcells + (i * oldw);
-		struct tb_cell *cdst = buf->cells + (i * width);
-		memcpy(cdst, csrc, sizeof(struct tb_cell) * minw);
-	}
-
-	free(oldcells);
-}
-
-static void cellbuf_clear(struct cellbuf *buf) {
-	int i;
-	int ncells = buf->width * buf->height;
-
-	for (i = 0; i < ncells; ++i) {
-		buf->cells[i].ch = ' ';
-		buf->cells[i].fg = foreground;
-		buf->cells[i].bg = background;
-	}
-}
-
-static void cellbuf_free(struct cellbuf *buf) {
-	free(buf->cells);
-}
-
-static void update_term_size(void) {
-	struct winsize sz;
-	memset(&sz, 0, sizeof(sz));
-	ioctl(inout, TIOCGWINSZ, &sz);
-
-	termw = sz.ws_col;
-	termh = sz.ws_row;
-}
-
-// int levels = { 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff };
-static int steps[6] = { 47, 115, 155, 195, 235, 256 }; // in between of each level
-
-uint8_t tb_rgb(uint32_t color) {
-
-	// extract rgb values from number (e.g. 0xffcc00 -> 16763904)
-	uint8_t rgb[3] = { 0, 0, 0 }; // r, g, b
-	rgb[0] = (color >> 16) & 0xFF; // e.g. 255
-	rgb[1] = (color >> 8)  & 0xFF; // e.g. 204
-	rgb[2] = (color >> 0)  & 0xFF; // e.g. 0
-
-	int nums[3] = { 0, 0, 0 }; // rgb to their most similar value between the 0-5 range
-	for (int c = 0; c < 3; c++) {
-	  for (int i = 0; i < 6; i++) {
-	    if (steps[i] > rgb[c]) {
-	    	nums[c] = i;
-	    	break;
-	    }
-	  }
-	}
-
-  // 16 + (r * 36) + (g * 6) + b
-  return 16 + (nums[0] * 36) + (nums[1] * 6) + nums[2];
-}
-
-static void send_attr(tb_color fg, tb_color bg) {
-	static tb_color lastfg = LAST_ATTR_INIT,
-					        lastbg = LAST_ATTR_INIT;
-
-	if (fg != lastfg || bg != lastbg) {
-		bytebuffer_puts(&output_buffer, funcs[T_SGR0]);
-
-		tb_color fgcol;
-		tb_color bgcol;
-
-		switch (outputmode) {
-#ifdef WITH_TRUECOLOR
-		case TB_OUTPUT_TRUECOLOR:
-			fgcol = fg;
-			bgcol = bg;
-			break;
-#endif
-
-		case TB_OUTPUT_256:
-			fgcol = fg & 0xFF;
-			bgcol = bg & 0xFF;
-			break;
-
-		case TB_OUTPUT_NORMAL:
-		default:
-			fgcol = fg & 0x0F;
-			bgcol = bg & 0x0F;
-		}
-
-		if (fg & TB_BOLD)
-			bytebuffer_puts(&output_buffer, funcs[T_BOLD]);
-
-		if (bg & TB_BOLD)
-			bytebuffer_puts(&output_buffer, funcs[T_BLINK]);
-
-		if (fg & TB_UNDERLINE)
-			bytebuffer_puts(&output_buffer, funcs[T_UNDERLINE]);
-
-		if ((fg & TB_REVERSE) || (bg & TB_REVERSE))
-			bytebuffer_puts(&output_buffer, funcs[T_REVERSE]);
-
-		write_sgr(fgcol, bgcol);
-		lastfg = fg;
-		lastbg = bg;
-	}
-}
 
 static void send_char(int x, int y, uint32_t c) {
 	char buf[7];

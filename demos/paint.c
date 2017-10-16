@@ -26,6 +26,14 @@ static const tb_color colors[] = {
   TB_BLUE,
   TB_MAGENTA,
   TB_CYAN,
+  TB_LIGHT_GRAY,
+  TB_DARK_GRAY,
+  TB_LIGHT_RED,
+  TB_LIGHT_GREEN,
+  TB_LIGHT_YELLOW,
+  TB_LIGHT_BLUE,
+  TB_LIGHT_MAGENTA,
+  TB_LIGHT_CYAN,
   TB_WHITE
 };
 
@@ -105,6 +113,7 @@ int main(void) {
   }
 
   tb_enable_mouse();
+  tb_select_output_mode(TB_OUTPUT_256);
   int w = tb_width();
   int h = tb_height();
   reallocBackBuffer(w, h);
