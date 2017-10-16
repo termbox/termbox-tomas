@@ -663,12 +663,10 @@ static void send_attr(tb_color fg, tb_color bg) {
 		if (fg & TB_UNDERLINE)
 			bytebuffer_puts(&output_buffer, funcs[T_UNDERLINE]);
 
-		if ((fg & TB_REVERSE) || (bg & TB_REVERSE)) {
+		if ((fg & TB_REVERSE) || (bg & TB_REVERSE))
 			bytebuffer_puts(&output_buffer, funcs[T_REVERSE]);
-		}
 
 		write_sgr(fgcol, bgcol);
-
 		lastfg = fg;
 		lastbg = bg;
 	}
