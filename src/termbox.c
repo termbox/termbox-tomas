@@ -55,7 +55,7 @@ static int lasty = LAST_COORD_INIT;
 static int cursor_x = -1;
 static int cursor_y = -1;
 
-static int color_support = 0;
+static int output_mode = TB_OUTPUT_NORMAL;
 static tb_color background = TB_DEFAULT;
 static tb_color foreground = TB_DEFAULT;
 
@@ -68,7 +68,7 @@ static void cellbuf_clear(struct cellbuf *buf);
 static void cellbuf_free(struct cellbuf *buf);
 
 static void update_term_size(void);
-static void send_attr(tb_color fg, tb_color bg);
+static void set_colors(tb_color fg, tb_color bg);
 static void send_char(int x, int y, uint32_t c);
 static void sigwinch_handler(int xxx);
 static int wait_fill_event(struct tb_event *event, struct timeval *timeout);
@@ -123,11 +123,8 @@ int tb_init_screen(int flags) {
 
 	initflags = flags;
 
-	if (initflags & TB_INIT_DETECT_COLORS) {
-		color_support = detect_color_support();
-	} else {
-		color_support = initflags & TB_INIT_COLOR_SUPPORT;
-	}
+	if (initflags & TB_INIT_DETECT_MODE)
+		output_mode = detect_color_support();
 
 	if (initflags & TB_INIT_NO_CURSOR)
 		tb_hide_cursor();
@@ -233,7 +230,7 @@ void tb_render(void) {
 
 			// copy back cell to front and set attributes
 			memcpy(front, back, sizeof(struct tb_cell));
-			send_attr(back->fg, back->bg);
+			set_colors(back->fg, back->bg);
 
 			// if we have a wide char, but x position + char width would exceed screen width
 			if (w > 1 && x >= front_buffer.width - (w - 1)) {
@@ -390,13 +387,18 @@ void tb_disable_mouse(void) {
 	bytebuffer_flush(&output_buffer, inout);
 }
 
+int tb_select_output_mode(int mode) {
+	if (mode) output_mode = mode;
+	return output_mode;
+}
+
 void tb_set_clear_attributes(tb_color fg, tb_color bg) {
 	foreground = fg;
 	background = bg;
 }
 
 void tb_clear_screen(void) {
-	send_attr(foreground, background);
+	set_colors(foreground, background);
 	bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
 
 	if (!IS_CURSOR_HIDDEN(cursor_x, cursor_y))
@@ -540,11 +542,11 @@ uint8_t get_base_color(uint32_t color) {
 
 tb_color tb_rgb(uint32_t in) {
 #ifdef WITH_TRUECOLOR
-	if (color_support == 2)
+	if (output_mode == 2)
 		return in;
 #endif
 
-	if (color_support == 1) {
+	if (output_mode == 1) {
 		return get_256_color(in);
 	} else {
 		return get_base_color(in);
@@ -594,7 +596,7 @@ uint8_t map_to_base_color(tb_color col) {
 
 static tb_color lastfg = LAST_ATTR_INIT, lastbg = LAST_ATTR_INIT;
 
-static void send_attr(tb_color fg, tb_color bg) {
+static void set_colors(tb_color fg, tb_color bg) {
 	if (fg == lastfg && bg == lastbg)
 		return;
 
@@ -641,7 +643,7 @@ static void send_attr(tb_color fg, tb_color bg) {
 	default_fg = fg == TB_DEFAULT;
 	default_bg = bg == TB_DEFAULT;
 
-	if (color_support != 2) {
+	if (output_mode != 2) {
 
 		// convert rgb value to either 256 or 16 color
 		fgcol = tb_rgb(fg);
@@ -667,7 +669,7 @@ static void send_attr(tb_color fg, tb_color bg) {
 
 #else // no truecolor support
 
-	if (color_support == 0) { // 16 colors
+	if (output_mode == 0) { // 16 colors
 		fgcol = fg > 16 ? map_to_base_color(fg) : fg; // & 0x0F;
 		bgcol = bg > 16 ? map_to_base_color(bg) : bg; // & 0x0F;
 	}
@@ -680,7 +682,7 @@ static void send_attr(tb_color fg, tb_color bg) {
 	// 16-231   [38;5;(N)m  [48;5;(N)m -- 6x6x6 RGB
 	// 232-255  [38;5;(N)m  [48;5;(N)m -- 24 grayscale
 
-	if (color_support == 1) {
+	if (output_mode == 1) {
 
 		if (!default_fg) {
 			WRITE_LITERAL("38;5;");
@@ -701,7 +703,7 @@ static void send_attr(tb_color fg, tb_color bg) {
 	// 0-7   9(N)m      10(N)m
 	// 8-15  1;9(N-8)m  1;9(N-8)m
 
-	} else if (color_support == 0) {
+	} else if (output_mode == 0) {
 
 		if (!default_fg) {
 			if (fgcol > 7) { // upper 8

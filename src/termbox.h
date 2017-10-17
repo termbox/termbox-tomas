@@ -153,8 +153,7 @@ struct tb_event {
 #define TB_INIT_ALTSCREEN     1
 #define TB_INIT_KEYPAD        2
 #define TB_INIT_NO_CURSOR     3
-#define TB_INIT_DETECT_COLORS 4
-#define TB_INIT_COLOR_SUPPORT 5
+#define TB_INIT_DETECT_MODE   4
 
 /* Initializes the termbox library. This function should be called before any
  * other functions. Function tb_init is same as tb_init_file("/dev/tty").
@@ -252,12 +251,49 @@ SO_IMPORT int tb_poll_event(struct tb_event *event);
 
 SO_IMPORT void tb_resize(void);
 
+#define TB_OUTPUT_NORMAL    0
+#define TB_OUTPUT_256       1
+#ifdef WITH_TRUECOLOR
+#define TB_OUTPUT_TRUECOLOR 2
+#endif
+
+/* Sets the termbox output mode. Termbox has three output options:
+ * 1. TB_OUTPUT_NORMAL     => [1..8]
+ *    This mode provides 8 different colors:
+ *      black, red, green, yellow, blue, magenta, cyan, white
+ *    Shortcut: TB_BLACK, TB_RED, ...
+ *    Attributes: TB_BOLD, TB_UNDERLINE, TB_REVERSE
+ *
+ *    Example usage:
+ *        tb_change_cell(x, y, '@', TB_BLACK | TB_BOLD, TB_RED);
+ *
+ * 2. TB_OUTPUT_256        => [0..256]
+ *    In this mode you can leverage the 256 terminal mode:
+ *    0x00 - 0x07: the 8 colors as in TB_OUTPUT_NORMAL
+ *    0x08 - 0x0f: TB_* | TB_BOLD
+ *    0x10 - 0xe7: 216 different colors
+ *    0xe8 - 0xff: 24 different shades of grey
+ *
+ *    Example usage:
+ *        tb_change_cell(x, y, '@', 184, 240);
+ *        tb_change_cell(x, y, '@', 0xb8, 0xf0);
+ *
+ * 3. TB_OUTPUT_TRUECOLOR  => [0x000000..0xFFFFFF]
+ *    This mode supports 24-bit true color. Format is 0xRRGGBB.
+ *
+ * Execute build/src/demo/output to see its impact on your terminal.
+ *
+ * If 'mode' is TB_OUTPUT_CURRENT, it returns the current output mode.
+ *
+ * Default termbox output mode is TB_OUTPUT_NORMAL.
+ */
+SO_IMPORT int tb_select_output_mode(int mode);
+
 /* Utility utf8 functions. */
 #define TB_EOF -1
 SO_IMPORT int tb_utf8_char_length(char c);
 SO_IMPORT int tb_utf8_char_to_unicode(uint32_t *out, const char *c);
 SO_IMPORT int tb_utf8_unicode_to_char(char *out, uint32_t c);
-
 
 /* Key constants. See also struct tb_event's key field.
  *
