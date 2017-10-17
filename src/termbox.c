@@ -46,7 +46,6 @@ static int termh = -1;
 
 static bool title_set = false;
 static int initflags = TB_INIT_ALL;
-static int outputmode = TB_OUTPUT_NORMAL;
 
 static int inout;
 static int winch_fds[2];
@@ -56,11 +55,11 @@ static int lasty = LAST_COORD_INIT;
 static int cursor_x = -1;
 static int cursor_y = -1;
 
+static int color_support = 0;
 static tb_color background = TB_DEFAULT;
 static tb_color foreground = TB_DEFAULT;
 
 static void write_cursor(int x, int y);
-static void write_sgr(tb_color fg, tb_color bg);
 static void write_title(const char * title);
 
 static void cellbuf_init(struct cellbuf *buf, int width, int height);
@@ -123,6 +122,12 @@ int tb_init_screen(int flags) {
 	bytebuffer_init(&output_buffer, 32 * 1024);
 
 	initflags = flags;
+
+	if (initflags & TB_INIT_DETECT_COLORS) {
+		color_support = detect_color_support();
+	} else {
+		color_support = initflags & TB_INIT_COLOR_SUPPORT;
+	}
 
 	if (initflags & TB_INIT_NO_CURSOR)
 		tb_hide_cursor();
@@ -385,11 +390,6 @@ void tb_disable_mouse(void) {
 	bytebuffer_flush(&output_buffer, inout);
 }
 
-int tb_select_output_mode(int mode) {
-	if (mode) outputmode = mode;
-	return outputmode;
-}
-
 void tb_set_clear_attributes(tb_color fg, tb_color bg) {
 	foreground = fg;
 	background = bg;
@@ -484,11 +484,21 @@ static void update_term_size(void) {
 	termh = sz.ws_row;
 }
 
+static uint8_t base_colors[8][3] = {
+ { 1, 1, 1 }, // black
+ { 1, 0, 0 }, // red
+ { 0, 1, 0 }, // green
+ { 1, 1, 0 }, // yellow
+ { 0, 0, 1 }, // blue
+ { 1, 0, 1 }, // magenta
+ { 0, 1, 1 }, // cyan
+ { 1, 1, 1 }  // white
+};
+
 // int levels = { 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff };
 static int steps[6] = { 47, 115, 155, 195, 235, 256 }; // in between of each level
 
-uint8_t tb_rgb(uint32_t color) {
-
+uint8_t get_256_color(uint32_t color) {
 	// extract rgb values from number (e.g. 0xffcc00 -> 16763904)
 	uint8_t rgb[3] = { 0, 0, 0 }; // r, g, b
 	rgb[0] = (color >> 16) & 0xFF; // e.g. 255
@@ -510,56 +520,34 @@ uint8_t tb_rgb(uint32_t color) {
   return 16 + (nums[0] * 36) + (nums[1] * 6) + nums[2];
 }
 
-uint8_t tb_rgb_hex(const char * hex) {
-	return tb_rgb(atoi(hex));
+uint8_t get_base_color(uint32_t color) {
+
+	// extract rgb values and round them to either 0 or 1
+	uint8_t rgb[3] = { 0, 0, 0 }; // r, g, b
+	rgb[0] = ((color >> 16) & 0xFF) > 128 ? 1 : 0;
+	rgb[1] = ((color >> 8)  & 0xFF) > 128 ? 1 : 0;
+	rgb[2] = ((color >> 0)  & 0xFF) > 128 ? 1 : 0;
+
+	uint8_t i;
+	for (i = 0; i < 8; i++) {
+		if (base_colors[i][0] == rgb[0] && base_colors[i][1] == rgb[1] && base_colors[i][2] == rgb[2]) {
+			return i;
+		}
+	}
+
+	return 0; // default
 }
 
-#define TB_UNSET 0x100
-
-static void send_attr(tb_color fg, tb_color bg) {
-	static tb_color lastfg = LAST_ATTR_INIT,
-					        lastbg = LAST_ATTR_INIT;
-
-	if (fg != lastfg || bg != lastbg) {
-		bytebuffer_puts(&output_buffer, funcs[T_SGR0]); // reset attrs
-
-		tb_color fgcol;
-		tb_color bgcol;
-
-		switch (outputmode) {
+tb_color tb_rgb(uint32_t in) {
 #ifdef WITH_TRUECOLOR
-		case TB_OUTPUT_TRUECOLOR:
-			fgcol = fg;
-			bgcol = bg;
-			break;
+	if (color_support == 2)
+		return in;
 #endif
 
-		case TB_OUTPUT_256:
-			fgcol = fg & 0xFF;
-			bgcol = bg & 0xFF;
-			break;
-
-		case TB_OUTPUT_NORMAL:
-		default:
-			fgcol = fg == TB_DEFAULT ? TB_UNSET : fg & 0x0F;
-			bgcol = bg == TB_DEFAULT ? TB_UNSET : bg & 0x0F;
-		}
-
-		if (fg & TB_BOLD)
-			bytebuffer_puts(&output_buffer, funcs[T_BOLD]);
-
-		//if (bg & TB_BOLD)
-		//	bytebuffer_puts(&output_buffer, funcs[T_BLINK]);
-
-		if (fg & TB_UNDERLINE)
-			bytebuffer_puts(&output_buffer, funcs[T_UNDERLINE]);
-
-		if ((fg & TB_REVERSE) || (bg & TB_REVERSE))
-			bytebuffer_puts(&output_buffer, funcs[T_REVERSE]);
-
-		write_sgr(fgcol, bgcol);
-		lastfg = fg;
-		lastbg = bg;
+	if (color_support == 1) {
+		return get_256_color(in);
+	} else {
+		return get_base_color(in);
 	}
 }
 
@@ -580,8 +568,150 @@ static int convertnum(uint8_t num, char* buf) {
 	return l;
 }
 
+uint8_t map_to_base_color(tb_color col) {
+	if (col > 255)
+		return TB_DEFAULT;
+ 	else if (col > 244) // light grays
+ 		return TB_LIGHT_GRAY;
+ 	else if (col > 231) // dark grays
+ 		return TB_MEDIUM_GRAY;
+ 	else if (col == 16) // dark grays
+ 		return TB_BLACK;
+ 	else if ((col - 16) % 36 == 0)
+ 		return TB_RED;
+ 	else if ((col - 16) % 6 == 0)
+ 		return TB_GREEN;
+ 	else if ((col - 16) % 3 == 0)
+ 		return TB_YELLOW;
+ 	else if (col % 3 == 0)
+ 		return TB_MAGENTA;
+ 	else
+ 		return TB_BLUE;
+}
+
 #define WRITE_LITERAL(X) bytebuffer_append(&output_buffer, (X), sizeof(X)-1)
 #define WRITE_INT(X) bytebuffer_append(&output_buffer, buf, convertnum((X), buf))
+
+static void send_attr(tb_color fg, tb_color bg) {
+	static tb_color lastfg = LAST_ATTR_INIT,
+					        lastbg = LAST_ATTR_INIT;
+
+	if (fg == lastfg && bg == lastbg)
+		return;
+
+	lastfg = fg;
+	lastbg = bg;
+
+	bytebuffer_puts(&output_buffer, funcs[T_SGR0]); // reset attrs
+
+	if (fg & TB_BOLD) {
+		bytebuffer_puts(&output_buffer, funcs[T_BOLD]);
+		fg ^= TB_BOLD;
+	}
+
+	//if (bg & TB_BOLD)
+	//	bytebuffer_puts(&output_buffer, funcs[T_BLINK]);
+
+	if (fg & TB_UNDERLINE) {
+		bytebuffer_puts(&output_buffer, funcs[T_UNDERLINE]);
+		fg ^= TB_UNDERLINE;
+	}
+
+	if ((fg & TB_REVERSE) || (bg & TB_REVERSE)) {
+		bytebuffer_puts(&output_buffer, funcs[T_REVERSE]);
+		fg ^= TB_REVERSE;
+		bg ^= TB_REVERSE;
+	}
+
+	if (fg == TB_DEFAULT && bg == TB_DEFAULT)
+		return;
+
+	tb_color fgcol = fg;
+	tb_color bgcol = bg;
+
+	char buf[32];
+	WRITE_LITERAL("\033[");
+
+#ifdef WITH_TRUECOLOR
+		if (color_support != 2) {
+			// convert rgb value to either 256 or 16 color
+			fgcol = tb_rgb(fg);
+			bgcol = tb_rgb(bg);
+		} else { // true color
+			WRITE_LITERAL("38;2;");
+			WRITE_INT(fg >> 16 & 0xFF); // fg R
+			WRITE_LITERAL(";");
+			WRITE_INT(fg >> 8 & 0xFF);  // fg G
+			WRITE_LITERAL(";");
+			WRITE_INT(fg & 0xFF);       // fg B
+			WRITE_LITERAL(";48;2;");
+			WRITE_INT(bg >> 16 & 0xFF); // bg R
+			WRITE_LITERAL(";");
+			WRITE_INT(bg >> 8 & 0xFF);  // bg G
+			WRITE_LITERAL(";");
+			WRITE_INT(bg & 0xFF);       // bg B
+		}
+#else
+		if (color_support == 1) { // 256
+			fgcol = fg & 0xFF;
+			bgcol = bg & 0xFF;
+		} else { // only 8 or 16 colors supported
+			fgcol = fg > 16 ? map_to_base_color(fg) : fg & 0x0F;
+			bgcol = bg > 16 ? map_to_base_color(bg) : bg & 0x0F;
+		}
+#endif
+
+	if (color_support == 1) {
+		// 256 colors
+		// num      fg          bg
+		// 0-15     [38;5;(N)m  [48;5;(N)m -- 16 ANSI colors
+		// 16-231   [38;5;(N)m  [48;5;(N)m -- 6x6x6 RGB
+		// 232-255  [38;5;(N)m  [48;5;(N)m -- 24 grayscale
+
+		if (fg != TB_DEFAULT) {
+			WRITE_LITERAL("38;5;");
+			WRITE_INT(fgcol);
+			if (bg != TB_DEFAULT) WRITE_LITERAL(";");
+		}
+		if (bg != TB_DEFAULT) {
+			WRITE_LITERAL("48;5;");
+			WRITE_INT(bgcol);
+		}
+	} else if (color_support == 0) {
+		// 16 color ISO
+		// num   fg         bg
+		// 0-7   3(N)m      4(N)m
+		// 8-15  1;3(N-8)m  1;4(N-8)m
+
+		// in bold
+		// 0-7   9(N)m      10(N)m
+		// 8-15  1;9(N-8)m  1;9(N-8)m
+		if (fg != TB_DEFAULT) {
+			if (fgcol > 7) { // upper 8
+				WRITE_LITERAL("1;3");
+				WRITE_INT(fgcol - 8);
+			} else {
+				WRITE_LITERAL("3");
+				WRITE_INT(fgcol);
+			}
+
+			if (bg != TB_DEFAULT)
+				WRITE_LITERAL(";");
+		}
+
+		if (bg != TB_DEFAULT) {
+			if (bgcol > 7) { // upper 8
+				WRITE_LITERAL("10"); // "1;4"
+				WRITE_INT(bgcol - 8);
+			} else {
+				WRITE_LITERAL("4");
+				WRITE_INT(bgcol);
+			}
+		}
+	}
+
+	WRITE_LITERAL("m");
+}
 
 static void write_cursor(int x, int y) {
 	char buf[32];
@@ -590,90 +720,6 @@ static void write_cursor(int x, int y) {
 	WRITE_LITERAL(";");
 	WRITE_INT(x+1);
 	WRITE_LITERAL("H");
-}
-
-static void write_sgr(tb_color fg, tb_color bg) {
-	if ((fg == TB_DEFAULT && bg == TB_DEFAULT) || (fg == TB_UNSET && bg == TB_UNSET))
-		return;
-
-	char buf[32];
-	WRITE_LITERAL("\033[");
-
-	switch (outputmode) {
-#ifdef WITH_TRUECOLOR
-	case TB_OUTPUT_TRUECOLOR:
-		WRITE_LITERAL("38;2;");
-		WRITE_INT(fg >> 16 & 0xFF); // fg R
-		WRITE_LITERAL(";");
-		WRITE_INT(fg >> 8 & 0xFF);  // fg G
-		WRITE_LITERAL(";");
-		WRITE_INT(fg & 0xFF);       // fg B
-		WRITE_LITERAL(";48;2;");
-		WRITE_INT(bg >> 16 & 0xFF); // bg R
-		WRITE_LITERAL(";");
-		WRITE_INT(bg >> 8 & 0xFF);  // bg G
-		WRITE_LITERAL(";");
-		WRITE_INT(bg & 0xFF);       // bg B
-		break;
-#endif
-
-	// 16 color ISO
-	// num      fg          bg
-	// 0-15     [38;5;(N)m  [48;5;(N)m -- 16 ANSI colors
-	// 16-231   [38;5;(N)m  [48;5;(N)m -- 6x6x6 RGB
-	// 232-255  [38;5;(N)m  [48;5;(N)m -- 24 grayscale
-	case TB_OUTPUT_256:
-		if (fg != TB_DEFAULT) {
-			WRITE_LITERAL("38;5;");
-			WRITE_INT(fg);
-
-			if (bg != TB_DEFAULT) {
-				WRITE_LITERAL(";");
-			}
-		}
-		if (bg != TB_DEFAULT) {
-			WRITE_LITERAL("48;5;");
-			WRITE_INT(bg);
-		}
-		break;
-
-	// 16 color ISO
-	// num   fg         bg
-	// 0-7   3(N)m      4(N)m
-	// 8-15  1;3(N-8)m  1;4(N-8)m
-
-	// in bold
-	// 0-7   9(N)m      10(N)m
-	// 8-15  1;9(N-8)m  1;9(N-8)m
-	case TB_OUTPUT_NORMAL:
-	default:
-		if (fg != TB_UNSET) {
-			if (fg > 7) { // upper 8
-				WRITE_LITERAL("1;3");
-				WRITE_INT(fg - 8);
-			} else {
-				WRITE_LITERAL("3");
-				WRITE_INT(fg);
-			}
-
-			if (bg != TB_UNSET)
-				WRITE_LITERAL(";");
-		}
-
-		if (bg != TB_UNSET) {
-			if (bg > 7) { // upper 8
-				WRITE_LITERAL("10"); // "1;4"
-				WRITE_INT(bg - 8);
-			} else {
-				WRITE_LITERAL("4");
-				WRITE_INT(bg);
-			}
-		}
-
-		break;
-	}
-
-	WRITE_LITERAL("m");
 }
 
 static void write_title(const char * title) {

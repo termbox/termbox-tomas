@@ -142,6 +142,22 @@ static int init_term_builtin(void) {
   return EUNSUPPORTED_TERM;
 }
 
+static bool detect_color_support() {
+#ifdef WITH_TRUECOLOR
+  const char *colorterm = getenv("COLORTERM");
+  if (colorterm && ((strcmp(colorterm) == "truecolor") == 0) || (strcmp(colorterm, "24bit") == 0)) {
+    return 2; // true color support
+  }
+#endif
+
+  const char *term = getenv("TERM");
+  if (term && (strstr(term, "-256") || strcmp(term, "xterm") == 0)) {
+    return 1; // 256 color support
+  }
+
+  return 0;
+}
+
 //----------------------------------------------------------------------
 // terminfo
 //----------------------------------------------------------------------

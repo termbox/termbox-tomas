@@ -14,17 +14,58 @@ extern "C" {
 #endif
 
 #ifdef WITH_TRUECOLOR
+
 typedef uint32_t tb_color;
-#define LAST_ATTR_INIT 0xFFFFFFFF
-#else
+#define LAST_ATTR_INIT  0xFFFFFFFF
+
+// attributes
+#define TB_BOLD         0x01000000
+#define TB_UNDERLINE    0x04000000
+#define TB_REVERSE      0x08000000
+// #define TB_ITALIC    0x03000000
+// #define TB_STRIKE    0x09000000
+
+// colors
+#define TB_DEFAULT       16777216 // 0xFFFFFF + 1
+
+#define TB_RED           0xFF0000
+#define TB_GREEN         0x00FF00
+#define TB_YELLOW        0xFFFF00
+#define TB_BLUE          0x0000FF
+#define TB_MAGENTA       0xFF00FF
+#define TB_CYAN          0x00FFFF
+#define TB_LIGHTER_GRAY  0xC0C0C0
+#define TB_MEDIUM_GRAY   0x808080
+#define TB_LIGHT_RED     0xff5555
+#define TB_LIGHT_GREEN   0x55ff55
+#define TB_LIGHT_YELLOW  0xffff55
+#define TB_LIGHT_BLUE    0x5555ff
+#define TB_LIGHT_MAGENTA 0xff55ff
+#define TB_LIGHT_CYAN    0x55ffff
+#define TB_WHITE         0xFFFFFF
+#define TB_BLACK         0x000000
+
+#define TB_DARKEST_GRAY  0x202020
+#define TB_DARKER_GRAY   0x404040
+#define TB_DARK_GRAY     0x606060
+// medium and lighter are above
+#define TB_LIGHT_GRAY    0xa0a0a0
+#define TB_LIGHTEST_GRAY 0xe0e0e0
+
+#else // no truecolor
+
 typedef uint16_t tb_color;
 #define LAST_ATTR_INIT 0xFFFF
-#endif
 
-/* Colors (see struct tb_cell's fg and bg fields). */
+// attributes
+#define TB_BOLD         0x0100
+#define TB_UNDERLINE    0x0400
+#define TB_REVERSE      0x0800
+// #define TB_ITALIC    0x0300
+// #define TB_STRIKE    0x0900
 
+// colors
 #define TB_DEFAULT       0x00
-
 #define TB_RED           0x01
 #define TB_GREEN         0x02
 #define TB_YELLOW        0x03
@@ -42,41 +83,22 @@ typedef uint16_t tb_color;
 #define TB_WHITE         0x0F
 #define TB_BLACK         0x10
 
-#define TB_DARKEST_GRAY      234
-#define TB_DARKER_GRAY       236
-#define TB_DARK_GRAY         241
-// #define TB_MEDIUM_GRAY     0x08
-// #define TB_LIGHT_GRAY      0x07
-#define TB_LIGHTER_GRAY      251
-#define TB_LIGHTEST_GRAY     254
+#define TB_DARKEST_GRAY   234
+#define TB_DARKER_GRAY    236
+#define TB_DARK_GRAY      241
+// medium and light are above
+#define TB_LIGHTER_GRAY   251
+#define TB_LIGHTEST_GRAY  254
 
-#define TB_DARKEST_GREY      234
-#define TB_DARKER_GREY       236
-#define TB_DARK_GREY         241
-#define TB_MEDIUM_GREY       0x08
-#define TB_LIGHT_GREY        0x07
-#define TB_LIGHTER_GREY      251
-#define TB_LIGHTEST_GREY     254
-
-/* Attributes, it is possible to use multiple attributes by combining them
- * using bitwise OR ('|'). Although, colors cannot be combined. But you can
- * combine attributes and a single color. See also struct tb_cell's fg and bg
- * fields.
- */
-
-#ifdef WITH_TRUECOLOR
-#define TB_BOLD      0x01000000
-#define TB_UNDERLINE 0x04000000
-#define TB_REVERSE   0x08000000
-// #define TB_ITALIC    0x03000000
-// #define TB_STRIKE    0x09000000
-#else
-#define TB_BOLD      0x0100
-#define TB_UNDERLINE 0x0400
-#define TB_REVERSE   0x0800
-// #define TB_ITALIC    0x0300
-// #define TB_STRIKE    0x0900
 #endif
+
+#define TB_DARKEST_GREY   TB_DARKEST_GRAY
+#define TB_DARKER_GREY    TB_DARKER_GRAY
+#define TB_DARK_GREY      TB_DARK_GRAY
+#define TB_MEDIUM_GREY    TB_MEDIUM_GRAY
+#define TB_LIGHT_GREY     TB_LIGHT_GRAY
+#define TB_LIGHTER_GREY   TB_LIGHTER_GRAY
+#define TB_LIGHTEST_GREY  TB_LIGHTEST_GRAY
 
 /* A cell, single conceptual entity on the terminal screen. The terminal screen
  * is basically a 2d array of cells. It has the following fields:
@@ -127,10 +149,12 @@ struct tb_event {
 
 /* Flags passed to tb_init_with() to specify which features should be enabled.
  */
-#define TB_INIT_ALL        -1
-#define TB_INIT_ALTSCREEN   1
-#define TB_INIT_KEYPAD      2
-#define TB_INIT_NO_CURSOR   3
+#define TB_INIT_ALL          -1
+#define TB_INIT_ALTSCREEN     1
+#define TB_INIT_KEYPAD        2
+#define TB_INIT_NO_CURSOR     3
+#define TB_INIT_DETECT_COLORS 4
+#define TB_INIT_COLOR_SUPPORT 5
 
 /* Initializes the termbox library. This function should be called before any
  * other functions. Function tb_init is same as tb_init_file("/dev/tty").
@@ -165,13 +189,12 @@ SO_IMPORT void tb_clear_screen(void);
 /* Sincronize the internal back buffer with the terminal. */
 SO_IMPORT void tb_render(void);
 
+SO_IMPORT tb_color tb_rgb(uint32_t in);
+
 /* Sets the position of the cursor. Upper-left character is (0, 0). If you pass
  * TB_HIDE_CURSOR as both coordinates, then the cursor will be hidden. Cursor
  * is hidden by default.
  */
-
-SO_IMPORT uint8_t tb_rgb(uint32_t color);
-SO_IMPORT uint8_t tb_hex(const char * hex);
 
 #define TB_HIDE_CURSOR -1
 SO_IMPORT void tb_set_cursor(int cx, int cy);
@@ -213,45 +236,6 @@ SO_IMPORT void tb_show_cursor(void);
 
 SO_IMPORT void tb_enable_mouse(void);
 SO_IMPORT void tb_disable_mouse(void);
-
-#define TB_OUTPUT_CURRENT   0
-#define TB_OUTPUT_NORMAL    1
-#define TB_OUTPUT_256       2
-#ifdef WITH_TRUECOLOR
-#define TB_OUTPUT_TRUECOLOR 3
-#endif
-
-/* Sets the termbox output mode. Termbox has three output options:
- * 1. TB_OUTPUT_NORMAL     => [1..8]
- *    This mode provides 8 different colors:
- *      black, red, green, yellow, blue, magenta, cyan, white
- *    Shortcut: TB_BLACK, TB_RED, ...
- *    Attributes: TB_BOLD, TB_UNDERLINE, TB_REVERSE
- *
- *    Example usage:
- *        tb_change_cell(x, y, '@', TB_BLACK | TB_BOLD, TB_RED);
- *
- * 2. TB_OUTPUT_256        => [0..256]
- *    In this mode you can leverage the 256 terminal mode:
- *    0x00 - 0x07: the 8 colors as in TB_OUTPUT_NORMAL
- *    0x08 - 0x0f: TB_* | TB_BOLD
- *    0x10 - 0xe7: 216 different colors
- *    0xe8 - 0xff: 24 different shades of grey
- *
- *    Example usage:
- *        tb_change_cell(x, y, '@', 184, 240);
- *        tb_change_cell(x, y, '@', 0xb8, 0xf0);
- *
- * 3. TB_OUTPUT_TRUECOLOR  => [0x000000..0xFFFFFF]
- *    This mode supports 24-bit true color. Format is 0xRRGGBB.
- *
- * Execute build/src/demo/output to see its impact on your terminal.
- *
- * If 'mode' is TB_OUTPUT_CURRENT, it returns the current output mode.
- *
- * Default termbox output mode is TB_OUTPUT_NORMAL.
- */
-SO_IMPORT int tb_select_output_mode(int mode);
 
 /* Wait for an event up to 'timeout' milliseconds and fill the 'event'
  * structure with it, when the event is available. Returns the type of the
