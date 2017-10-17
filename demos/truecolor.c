@@ -4,7 +4,6 @@
 int main() {
 #ifdef WITH_TRUECOLOR
 	tb_init();
-	tb_select_output_mode(TB_OUTPUT_TRUECOLOR);
 
 	int w = tb_width();
 	int h = tb_height();

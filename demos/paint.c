@@ -7,7 +7,6 @@ static int curCol = 0;
 static int curRune = 4;
 static struct tb_cell *backbuf;
 static int bbw = 0, bbh = 0;
-static int current_mode;
 
 static const tb_chr runes[] = {
   0x20,   // ' '
@@ -112,15 +111,6 @@ void reallocBackBuffer(int w, int h) {
   backbuf = calloc(sizeof(struct tb_cell), w*h);
 }
 
-void toggle_mode() {
-  if (current_mode == TB_OUTPUT_256)
-    current_mode = tb_select_output_mode(TB_OUTPUT_NORMAL);
-  else
-    current_mode = tb_select_output_mode(TB_OUTPUT_256);
-
-  printf("Current mode: %d", current_mode);
-}
-
 int main(void) {
   int code = tb_init();
   if (code < 0) {
@@ -128,7 +118,6 @@ int main(void) {
     return -1;
   }
 
-  toggle_mode();
   tb_enable_mouse();
   int w = tb_width();
   int h = tb_height();
@@ -151,8 +140,6 @@ int main(void) {
       if (ev.key == TB_KEY_ESC) {
         tb_shutdown();
         return 0;
-      } else if (ev.ch == 'm') {
-        toggle_mode();
       }
 
       break;

@@ -37,10 +37,9 @@ static void print_combinations_table(int sx, int sy, const tb_color attr) {
 
 static void draw_all() {
 	tb_resize();
-	tb_select_output_mode(TB_OUTPUT_NORMAL);
 
 	uint8_t w = line_length; // strlen(chars)+1;
-	uint8_t h = (TB_BLACK) + 2;
+	uint8_t h = 18; // 16 colors plus space
 
 	tb_string(1, 0, 0, 0, "Normal");
 	print_combinations_table(1, (h * 0) + 1, 0);
@@ -51,7 +50,6 @@ static void draw_all() {
 	tb_render();
 
 	int c, x, y = 1;
-	tb_select_output_mode(TB_OUTPUT_256);
 	tb_string(w, 0, 0, 0, "256 color");
 
 	for (c = 0, x = 0; c < 256; c++, x++) {

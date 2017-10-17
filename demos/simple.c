@@ -7,14 +7,14 @@ int main(void) {
   }
 
   // set up our colors and test string
-  int bg_color = TB_GREEN;
-  int fg_color = TB_DEFAULT;
+  int fg_color = tb_rgb(0xFFCC00);
+  int bg_color = TB_DEFAULT;
 
   // get the screen resolution
   int w = tb_width();
   int h = tb_height();
 
-  tb_string((w/2)-6, h/2, bg_color, fg_color, "Hello click.");
+  tb_string((w/2)-6, (h/2), fg_color, bg_color, "Hello click.");
   tb_render();
 
   int clicks = 0;
@@ -27,7 +27,7 @@ int main(void) {
     switch (ev.type) {
     case TB_EVENT_RESIZE:
       tb_resize();
-      tb_stringf((w/2)-10, h/2, bg_color, fg_color, "Window resized to: %dx%d", ev.w, ev.h);
+      tb_stringf((w/2)-10, h/2, fg_color, bg_color, "Window resized to: %dx%d", ev.w, ev.h);
       break;
 
     case TB_EVENT_KEY:
@@ -37,7 +37,7 @@ int main(void) {
       break;
     case TB_EVENT_MOUSE:
       if (ev.key == TB_KEY_MOUSE_LEFT) {
-        tb_stringf((w/2)-10, h/2, bg_color, fg_color, "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
+        tb_stringf((w/2)-10, h/2, fg_color, bg_color, "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
       }
       break;
     }
