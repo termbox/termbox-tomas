@@ -89,11 +89,11 @@ void colorAttrFunc(int i, tb_chr *r, tb_color *fg, tb_color *bg) {
   *bg = colors[i];
 }
 
-void updateAndRedrawAll(int mx, int my) {
+void updateAndRedrawAll(int mx, int my, int rune) {
   int h = tb_height();
 
   if (mx != -1 && my != -1) {
-    backbuf[bbw*my+mx].ch = runes[curRune];
+    backbuf[bbw*my+mx].ch = rune;
     backbuf[bbw*my+mx].fg = colors[curCol];
   }
 
@@ -122,13 +122,17 @@ int main(void) {
   int w = tb_width();
   int h = tb_height();
   reallocBackBuffer(w, h);
-  updateAndRedrawAll(-1, -1);
+  updateAndRedrawAll(-1, -1, 0);
+
+  int mx, my;
+  tb_chr rune = 0;
+  struct tb_event ev;
 
   for (;;) {
-    struct tb_event ev;
-    int mx = -1;
-    int my = -1;
+    mx = -1; my = -1;
+
     int t = tb_poll_event(&ev);
+
     if (t == -1) {
       tb_shutdown();
       fprintf(stderr, "termbox poll event error\n");
@@ -146,9 +150,14 @@ int main(void) {
 
     case TB_EVENT_MOUSE:
       if (ev.key == TB_KEY_MOUSE_LEFT) {
-        mx = ev.x;
-        my = ev.y;
+        mx = ev.x; my = ev.y;
+        rune = runes[curRune];
       }
+      else if (ev.key == TB_KEY_MOUSE_RIGHT) {
+        mx = ev.x; my = ev.y;
+        rune = runes[0];
+      }
+
       break;
 
     case TB_EVENT_RESIZE:
@@ -157,6 +166,6 @@ int main(void) {
       break;
     }
 
-    updateAndRedrawAll(mx, my);
+    updateAndRedrawAll(mx, my, rune);
   }
 }
