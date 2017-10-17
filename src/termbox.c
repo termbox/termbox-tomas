@@ -766,13 +766,84 @@ static void sigwinch_handler(int xxx) {
 	unused = write(winch_fds[1], &zzz, sizeof(int));
 }
 
-#define MAXSEQ 14 // need to make room for urxvt mouse sequences
 static int cutesc = 0;
+#define MAXSEQ 14 // need to make room for urxvt mouse sequences
 static char seq[MAXSEQ];
 
+static int decode_char(struct tb_event * event, uint32_t ch) {
+  if (ch == 127) {
+    event->key = TB_KEY_BACKSPACE2;
+  } else if (ch < 32) { // ctrl + a-z or number up to 7
+    event->meta = ch == 13 ? 0 : TB_META_CTRL;
+    event->key = ch;
+    // event->ch  = ch + 97; // we don't want it to be printed
+  } else { // a-z -- A-Z -- 0-9
+    event->meta = ('A' <= ch && ch <= 'Z') ? TB_META_SHIFT : 0;
+    event->ch = ch;
+  }
+  return 1;
+}
+
+static int decode_utf8(struct tb_event * event, char c) {
+  int rs, nread = 1;
+	// uint8_t len = (c >> 7 == 0) ? 1 : (c >> 5 == 0x6) ? 2 : (c >> 4 == 0xE) ? 3 : (c >> 5 == 0x1E) ? 4 : 0;
+	uint8_t len = tb_utf8_char_length(c);
+	uint32_t ch;
+
+	seq[0] = c;
+  while (nread < len) {
+    // if read error, or if didn't read end of sequence, return -1
+    rs = read(inout, seq + nread++, 1);
+    if (rs < 1)
+    	return -1;
+  }
+
+	seq[nread] = '\0';
+
+	len = tb_utf8_char_to_unicode(&ch, seq);
+	decode_char(event, ch);
+	// bytebuffer_truncate(&input_buffer, tb_utf8_char_length(seq[0]));
+
+	return len;
+}
+
+
+static int decode_esc(struct tb_event * event) {
+  int rs, nread = 1;
+	seq[0] = 27;
+
+  while (nread < MAXSEQ) {
+    rs = read(inout, seq + nread++, 1);
+    if (rs == -1) return -1;
+    if (rs == 0) break;
+
+    // handle urxvt alt + keys
+    if (seq[nread-1] == 27) { // found another escape char!
+    	if (seq[nread-2] == 27) { // double esc
+    	  if (read(inout, seq + nread++, 1) == 0) { // end of the road, so it's alt+esc
+      		event->key  = TB_KEY_ESC;
+      		event->meta = TB_META_ALT;
+      		return 1;
+    	  } // if not end of road, then it must be ^[^[[A (urxvt alt+arrows)
+    	} else {
+        cutesc = 1;
+        break;
+    	}
+    }
+  }
+
+  if (nread == MAXSEQ) return 0;
+  seq[nread] = '\0';
+
+	int mouse_parsed = parse_mouse_event(event, seq, nread-1);
+	if (mouse_parsed != 0)
+	  return mouse_parsed;
+
+	return parse_esc_seq(event, seq, nread-1);
+}
+
 static int read_and_extract_event(struct tb_event * event) {
-  int nread, rs;
-  int c = 0;
+  int nread, c = 0;
 
   if (cutesc) {
     c = 27;
@@ -787,63 +858,13 @@ static int read_and_extract_event(struct tb_event * event) {
 	event->ch   = 0;
 
 	if (c == 27) { // escape
-
-  	seq[0] = c;
-    nread = 1;
-    while (nread < MAXSEQ) {
-      rs = read(inout, seq + nread++, 1);
-      if (rs == -1) return -1;
-      if (rs == 0) break;
-
-      // handle urxvt alt + keys
-      if (seq[nread-1] == 27) { // found another escape char!
-      	if (seq[nread-2] == 27) { // double esc
-      	  if (read(inout, seq + nread++, 1) == 0) { // end of the road, so it's alt+esc
-        		event->key  = TB_KEY_ESC;
-        		event->meta = TB_META_ALT;
-        		return 1;
-      	  } // if not end of road, then it must be ^[^[[A (urxvt alt+arrows)
-      	} else {
-	        cutesc = 1;
-	        break;
-      	}
-      }
-    }
-
-    if (nread == MAXSEQ) return 0;
-    seq[nread] = '\0';
-
-  	int mouse_parsed = parse_mouse_event(event, seq, nread-1);
-  	if (mouse_parsed != 0)
-  	  return mouse_parsed;
-
-  	return parse_esc_seq(event, seq, nread-1);
+		return decode_esc(event);
 
 	} else if (0 <= c && c <= 127) { // from ctrl-a to z, not esc
-
-		decode_char(event, c);
-    return 1;
+		return decode_char(event, c);
 
   } else { // utf8 sequence
-
-  	// uint8_t len = (c >> 7 == 0) ? 1 : (c >> 5 == 0x6) ? 2 : (c >> 4 == 0xE) ? 3 : (c >> 5 == 0x1E) ? 4 : 0;
-  	uint8_t len = tb_utf8_char_length(c);
-		seq[0] = c;
-
-    nread = 1;
-    while (nread < len) {
-      rs = read(inout, seq + nread++, 1);
-      // if read error, or if didn't read end of sequence, return -1
-      if (rs < 1) return -1;
-    }
-		seq[nread] = '\0';
-
-  	uint32_t ch;
-		len = tb_utf8_char_to_unicode(&ch, seq);
-  	decode_char(event, ch);
-		// bytebuffer_truncate(&input_buffer, tb_utf8_char_length(seq[0]));
-
-		return len;
+  	return decode_utf8(event, c);
   }
 }
 

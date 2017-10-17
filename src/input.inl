@@ -479,17 +479,3 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
   return 1;
 }
 
-static void decode_char(struct tb_event * event, uint32_t ch) {
-  if (ch == 127) {
-    event->key = TB_KEY_BACKSPACE2;
-
-  } else if (ch < 32) { // ctrl + a-z or number up to 7
-    event->meta = ch == 13 ? 0 : TB_META_CTRL;
-    event->key = ch;
-    // event->ch  = ch + 97; // we don't want it to be printed
-
-  } else { // a-z -- A-Z -- 0-9
-    event->meta = ('A' <= ch && ch <= 'Z') ? TB_META_SHIFT : 0;
-    event->ch = ch;
-  }
-}
