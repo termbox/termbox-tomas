@@ -103,9 +103,9 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
 
     if (event->key > TB_KEY_MOUSE_RELEASE) { // click
       if (is_double_click(event->key, event->x, event->y)) {
-        event->ch = ++click_count;
+        event->h = ++click_count;
       } else {
-        event->ch = click_count = 1; // not double click. reset count
+        event->h = click_count = 1; // not double click. reset count
       }
     }
 
@@ -196,9 +196,9 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
 
     if (event->key > TB_KEY_MOUSE_RELEASE) { // click
       if (is_double_click(event->key, event->x, event->y)) {
-        event->ch = ++click_count;
+        event->h = ++click_count;
       } else {
-        event->ch = click_count = 1; // not double click. reset count
+        event->h = click_count = 1; // not double click. reset count
       }
     }
 
