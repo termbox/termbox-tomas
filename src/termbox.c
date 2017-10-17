@@ -362,13 +362,6 @@ int tb_height(void) {
   return termh;
 }
 
-void tb_clear_buffer(void) {
-  if (buffer_size_change_request)
-    tb_resize();
-
-  cellbuf_clear(&back_buffer);
-}
-
 void tb_hide_cursor(void) {
   bytebuffer_puts(&output_buffer, funcs[T_HIDE_CURSOR]);
 }
@@ -413,6 +406,13 @@ void tb_clear_screen(void) {
    * cursor moved */
   lastx = LAST_COORD_INIT;
   lasty = LAST_COORD_INIT;
+}
+
+void tb_clear_buffer(void) {
+  if (buffer_size_change_request)
+    tb_resize();
+
+  cellbuf_clear(&back_buffer);
 }
 
 void tb_resize(void) {

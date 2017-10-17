@@ -14,7 +14,7 @@ int main(void) {
   int w = tb_width();
   int h = tb_height();
 
-  tb_string((w/2)-6, (h/2), fg_color, bg_color, "Hello click.");
+  tb_string((w/2)-6, (h/2), fg_color, bg_color, "Hello there. ☺");
   tb_render();
 
   int clicks = 0;
@@ -26,7 +26,9 @@ int main(void) {
   while (tb_poll_event(&ev) != -1) {
     switch (ev.type) {
     case TB_EVENT_RESIZE:
-      tb_resize();
+      w = ev.w;
+      h = ev.h;
+      tb_clear_buffer();
       tb_stringf((w/2)-10, h/2, fg_color, bg_color, "Window resized to: %dx%d", ev.w, ev.h);
       break;
 
