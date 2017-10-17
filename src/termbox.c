@@ -782,18 +782,13 @@ static int read_and_extract_event(struct tb_event * event) {
     if (nread == -1) return -1;
   }
 
-  seq[0] = c;
 	event->type = TB_EVENT_KEY;
   event->meta = 0;
 	event->ch   = 0;
 
-	if (c != 27 && 0 <= c && c <= 127) { // from ctrl-a to z, not esc
+	if (c == 27) { // escape
 
-		decode_char(event, c);
-    return 1;
-
-  } else { // either esc or unicode
-
+  	seq[0] = c;
     nread = 1;
     while (nread < MAXSEQ) {
       rs = read(inout, seq + nread++, 1);
@@ -818,25 +813,37 @@ static int read_and_extract_event(struct tb_event * event) {
     if (nread == MAXSEQ) return 0;
     seq[nread] = '\0';
 
-    if (c == 27) {
-	  	int mouse_parsed = parse_mouse_event(event, seq, nread-1);
-	  	if (mouse_parsed != 0)
-	  	  return mouse_parsed;
+  	int mouse_parsed = parse_mouse_event(event, seq, nread-1);
+  	if (mouse_parsed != 0)
+  	  return mouse_parsed;
 
-	  	return parse_esc_seq(event, seq, nread-1);
+  	return parse_esc_seq(event, seq, nread-1);
 
-    } else if (nread-1 >= tb_utf8_char_length(seq[0])) {
+	} else if (0 <= c && c <= 127) { // from ctrl-a to z, not esc
 
-    	uint32_t ch;
-			tb_utf8_char_to_unicode(&ch, seq);
-    	decode_char(event, ch);
+		decode_char(event, c);
+    return 1;
 
-			// bytebuffer_truncate(inbuf, tb_utf8_char_length(seq[0]));
-			return 1;
-		} else {
-			// unknown sequence
-			return -1;
-		}
+  } else { // utf8 sequence
+
+  	// uint8_t len = (c >> 7 == 0) ? 1 : (c >> 5 == 0x6) ? 2 : (c >> 4 == 0xE) ? 3 : (c >> 5 == 0x1E) ? 4 : 0;
+  	uint8_t len = tb_utf8_char_length(c);
+		seq[0] = c;
+
+    nread = 1;
+    while (nread < len) {
+      rs = read(inout, seq + nread++, 1);
+      // if read error, or if didn't read end of sequence, return -1
+      if (rs < 1) return -1;
+    }
+		seq[nread] = '\0';
+
+  	uint32_t ch;
+		len = tb_utf8_char_to_unicode(&ch, seq);
+  	decode_char(event, ch);
+		// bytebuffer_truncate(&input_buffer, tb_utf8_char_length(seq[0]));
+
+		return len;
   }
 }
 
