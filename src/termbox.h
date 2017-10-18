@@ -55,7 +55,7 @@ typedef uint32_t tb_color;
 #else // no truecolor
 
 typedef uint16_t tb_color;
-#define LAST_ATTR_INIT 0xFFFF
+#define LAST_ATTR_INIT  0xFFFF
 
 // attributes
 #define TB_BOLD         0x0100
@@ -92,6 +92,7 @@ typedef uint16_t tb_color;
 
 #endif
 
+#define TB_NONE           TB_DEFAULT
 #define TB_DARKEST_GREY   TB_DARKEST_GRAY
 #define TB_DARKER_GREY    TB_DARKER_GRAY
 #define TB_DARK_GREY      TB_DARK_GRAY
@@ -318,6 +319,10 @@ SO_IMPORT int tb_utf8_unicode_to_char(char *out, uint32_t c);
 #define TB_KEY_END              (0xFFFF-15)
 #define TB_KEY_PGUP             (0xFFFF-16)
 #define TB_KEY_PGDN             (0xFFFF-17)
+
+// symlinks :)
+#define TB_KEY_PAGE_UP          TB_KEY_PGUP
+#define TB_KEY_PAGE_DOWN        TB_KEY_PGDN
 
 #define TB_KEY_ARROW_LEFT       (0xFFFF-18)
 #define TB_KEY_ARROW_RIGHT      (0xFFFF-19)

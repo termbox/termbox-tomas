@@ -685,10 +685,12 @@ static void set_colors(tb_color fg, tb_color bg) {
 /*
   echo "256"
   echo -e "\e[38;5;3mnormal\e[0mtext"
+  echo -e "\e[2;38;5;3mdim\e[0mtext"
   echo -e "\e[38;5;11mbright\e[0mtext"
   echo -e "\e[1;38;5;11mbold\e[0mtext (also bright)"
   echo "iso"
   echo -e "\e[33mnormal\e[0mtext"
+  echo -e "\e[2;33mdim\e[0mtext"
   echo -e "\e[1;33mbold\e[0mtext"
 */
 
@@ -723,7 +725,6 @@ static void set_colors(tb_color fg, tb_color bg) {
         WRITE_LITERAL("3");
         WRITE_INT(fgcol);
       }
-
       if (!default_bg) WRITE_LITERAL(";");
     }
 
