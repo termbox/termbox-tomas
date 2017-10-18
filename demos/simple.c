@@ -1,14 +1,39 @@
-#include <unistd.h> // for sleep()
+#include <stdio.h>
 #include "../src/termbox.h"
+
+// set up our colors and test string
+tb_color fg_color = TB_YELLOW | TB_BOLD;
+tb_color bg_color = TB_DEFAULT;
+
+#define MAX_COLOR_VALUE 255
+
+void increase(tb_color * col) {
+  *col = (*col & 0xFF) + 1;
+  if (*col > MAX_COLOR_VALUE) {
+    *col = 0;
+  }
+}
+
+void decrease(tb_color * col) {
+  if ((*col & 0xFF) == 0) {
+    *col = MAX_COLOR_VALUE;
+  } else {
+    *col = (*col & 0xFF) - 1;
+  }
+}
+
+void toggle_attr(int attr, tb_color * col) {
+  if (*col & attr) { // has attr
+    *col ^= attr;
+  } else {
+    *col |= attr;
+  }
+}
 
 int main(void) {
   if (tb_init() != 0) {
     return 1; // couldn't initialize our screen
   }
-
-  // set up our colors and test string
-  int fg_color = tb_rgb(0xFFCC00);
-  int bg_color = TB_DEFAULT;
 
   // get the screen resolution
   int w = tb_width();
@@ -35,6 +60,21 @@ int main(void) {
     case TB_EVENT_KEY:
       if (ev.key == TB_KEY_ESC || ev.key == TB_KEY_CTRL_C)
         goto done;
+
+      if (ev.ch == 'b') {
+        // toggle_attr(TB_BOLD, ev.meta & TB_META_SHIFT ? &bg_color : &fg_color);
+        toggle_attr(TB_BOLD, &fg_color);
+      } else if (ev.ch == 'u') {
+        toggle_attr(TB_UNDERLINE, &fg_color);
+      } else if (ev.ch == 'r') {
+        toggle_attr(TB_REVERSE, &fg_color);
+      } else if (ev.key == TB_KEY_ARROW_RIGHT) {
+        increase(ev.meta & TB_META_SHIFT ? &bg_color : &fg_color);
+      } else if (ev.key == TB_KEY_ARROW_LEFT) {
+        decrease(ev.meta & TB_META_SHIFT ? &bg_color : &fg_color);
+      }
+
+      tb_stringf((w/2)-14, h/2, fg_color, bg_color, "Foreground: %03d, background: %03d", fg_color & 0xFF, bg_color & 0xFF);
 
       break;
     case TB_EVENT_MOUSE:
