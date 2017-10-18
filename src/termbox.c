@@ -670,8 +670,8 @@ static void set_colors(tb_color fg, tb_color bg) {
 #else // no truecolor support
 
   if (output_mode == 0) { // 16 colors
-    fgcol = fg > 16 ? map_to_base_color(fg) : fg; // & 0x0F;
-    bgcol = bg > 16 ? map_to_base_color(bg) : bg; // & 0x0F;
+    fgcol = fgcol > 16 ? map_to_base_color(fgcol) : fgcol; // & 0x0F;
+    bgcol = bgcol > 16 ? map_to_base_color(bgcol) : bgcol; // & 0x0F;
   }
 
 #endif
@@ -681,6 +681,16 @@ static void set_colors(tb_color fg, tb_color bg) {
   // 0-15     [38;5;(N)m  [48;5;(N)m -- 16 ANSI colors
   // 16-231   [38;5;(N)m  [48;5;(N)m -- 6x6x6 RGB
   // 232-255  [38;5;(N)m  [48;5;(N)m -- 24 grayscale
+
+/*
+  echo "256"
+  echo -e "\e[38;5;3mnormal\e[0mtext"
+  echo -e "\e[38;5;11mbright\e[0mtext"
+  echo -e "\e[1;38;5;11mbold\e[0mtext (also bright)"
+  echo "iso"
+  echo -e "\e[33mnormal\e[0mtext"
+  echo -e "\e[1;33mbold\e[0mtext"
+*/
 
   if (output_mode == 1) {
 
@@ -799,7 +809,6 @@ static int decode_utf8(struct tb_event * event, char c) {
   }
 
   seq[nread] = '\0';
-
   len = tb_utf8_char_to_unicode(&ch, seq);
   decode_char(event, ch);
   // bytebuffer_truncate(&input_buffer, tb_utf8_char_length(seq[0]));
