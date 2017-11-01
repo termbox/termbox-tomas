@@ -29,7 +29,7 @@ And release the kraken:
 
 ## Usage
 
-Termbox's has a very clean interface. Here's your basic 'hello world':
+Termbox has a very clean interface. Here's your basic 'hello world':
 
 ```c
 #include <unistd.h> // for sleep()
@@ -105,15 +105,6 @@ tb_shutdown();
 ```
 
 For more information, take a look at [the demos](https://github.com/tomas/termbox/tree/master/demos) or check the [termbox.h](https://github.com/tomas/termbox/blob/master/src/termbox.h) header for the full termbox API.
-
-## Links
-
-- https://github.com/nsf/termbox - Original version of this library
-- http://pecl.php.net/package/termbox - PHP Termbox wrapper
-- https://github.com/nsf/termbox-go - Go pure Termbox implementation
-- https://github.com/gchp/rustbox - Rust Termbox wrapper
-- https://github.com/fouric/cl-termbox - Common Lisp Termbox wrapper
-- https://github.com/zyedidia/termbox-d - D Termbox wrapper
 
 ## License
 
