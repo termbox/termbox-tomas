@@ -40,15 +40,19 @@ int main(int argc, char **argv) {
     return 1; // couldn't initialize our screen
 
   // set up our colors
-  int bg_color = TB_DEFAULT;
-  int fg_color = TB_DEFAULT;
+  int bg = TB_BLACK;
+  int fg = TB_WHITE;
 
   // get the screen resolution
   int w = tb_width();
   int h = tb_height();
 
-  // now, put some text in the middle of the screen
-  tb_string((w/2)-10, h/2, bg_color, fg_color, "Hello world!");
+  // calculate the coordinates for the center of the screen
+  int x = (w/2);
+  int y = (h/2);
+
+  // put some text into those coordinates
+  tb_string(x-10, y, bg_color, fg_color, "Hello world!");
 
   // flush the output to the screen
   tb_render();
@@ -88,8 +92,8 @@ while (tb_poll_event(&ev) != -1) {
     case TB_EVENT_MOUSE:
       // ok, looks like we got a mouse event
       if (ev.key == TB_KEY_MOUSE_LEFT) {
-        // increase the counter and show a message on screen, also
-        // including the mouse coordinates at that point.
+        // increase the counter and show a message on screen.
+        // we'll also include the reported mouse coordinates.
         tb_printf((w/2)-6, h/2, bg_color, fg_color,
           "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
 

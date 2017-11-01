@@ -24,7 +24,6 @@ void draw() {
   tb_stringf(0, 0, 0, TB_BLACK, "%*c", w, ' ');
   tb_stringf(1, 0, 0, TB_BLACK, "%s", "Basic editor");
   tb_stringf(w-18, 0, 0, TB_BLACK, "%s", "Press ESC to quit");
-  // tb_stringf(1, 0, 0, TB_BLACK, "%s (%d chars)", "Basic editor", count);
 
   // print text
   c = 0;
@@ -34,6 +33,7 @@ void draw() {
     c += w;
   }
 
+  // and flush the output
   tb_render();
 }
 
