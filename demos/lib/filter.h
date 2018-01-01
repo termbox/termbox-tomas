@@ -26,11 +26,12 @@ int isu8start(unsigned char c) {
 const char * strcasechr(const char *s1, const char *s2) {
   wchar_t wc1, wc2;
   size_t  i;
-  int in_esc_seq, nbytes;
+  int in_esc_seq, nbytes, res;
 
-  switch (mbtowc(&wc2, s2, MB_CUR_MAX)) {
+  res = mbtowc(&wc2, s2, MB_CUR_MAX);
+  switch (res) {
   case -1:
-    mbtowc(NULL, NULL, MB_CUR_MAX);
+    res = mbtowc(NULL, NULL, MB_CUR_MAX);
   /* FALLTHROUGH */
   case 0:
     return NULL;
@@ -46,7 +47,7 @@ const char * strcasechr(const char *s1, const char *s2) {
     } else if (i > 0 && s1[i - 1] == '\033' && s1[i] == '[') {
       in_esc_seq = 1;
     } else if ((nbytes = mbtowc(&wc1, &s1[i], MB_CUR_MAX)) == -1) {
-      mbtowc(NULL, NULL, MB_CUR_MAX);
+      res = mbtowc(NULL, NULL, MB_CUR_MAX);
     } else if (wcsncasecmp(&wc1, &wc2, 1) == 0) {
       return &s1[i];
     }
