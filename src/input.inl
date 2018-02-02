@@ -26,6 +26,8 @@ static int click_count = 1;
 static struct click last_click = { -1, -1, -1, { 0, 0 } };
 static double time_diff;
 
+#define DOUBLE_CLICK_TIME 0.5
+
 static double get_timediff(struct timespec start, struct timespec end) {
   return ((double)end.tv_sec + 1.0e-9 * end.tv_nsec) \
     - ((double)start.tv_sec + 1.0e-9 * start.tv_nsec);
@@ -39,12 +41,12 @@ static bool is_double_click(int type, int x, int y) {
   if (last_click.y != -1 && y == last_click.y && type == last_click.type) {
 
     // then get the current time and its difference against the last one
-    struct timespec now = {0, 0};
+    struct timespec now = { 0, 0 };
     clock_gettime(CLOCK_MONOTONIC, &now);
     time_diff = get_timediff(last_click.ts, now);
 
     // and toggle the flag if it took less than 0.4 secs
-    res = time_diff < 0.4;
+    res = time_diff < DOUBLE_CLICK_TIME;
   }
 
   // store click for next check
