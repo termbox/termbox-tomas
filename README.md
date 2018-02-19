@@ -1,4 +1,4 @@
-# Termbox
+# Termbox2
 
 A small library in C for building text-based user interfaces. This is a (non-compatible) fork of nsf's [original work](https://github.com/nsf/termbox), with a few changes:
 
@@ -29,7 +29,7 @@ And release the kraken:
 
 ## Usage
 
-Termbox's has a very clean interface. Here's your basic 'hello world':
+Termbox has a very clean interface. Here's your basic 'hello world':
 
 ```c
 #include <unistd.h> // for sleep()
@@ -124,6 +124,8 @@ For more information, take a look at [the demos](https://github.com/tomas/termbo
 MIT.
 
 ## Changelog
+
+(Needs update)
 
 v1.1.0:
 
