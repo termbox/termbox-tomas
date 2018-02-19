@@ -26,6 +26,8 @@ static int click_count = 1;
 static struct click last_click = { -1, -1, -1, { 0, 0 } };
 static double time_diff;
 
+#define DOUBLE_CLICK_TIME 0.4
+
 static double get_timediff(struct timespec start, struct timespec end) {
   return ((double)end.tv_sec + 1.0e-9 * end.tv_nsec) \
     - ((double)start.tv_sec + 1.0e-9 * start.tv_nsec);
@@ -39,12 +41,12 @@ static bool is_double_click(int type, int x, int y) {
   if (last_click.y != -1 && y == last_click.y && type == last_click.type) {
 
     // then get the current time and its difference against the last one
-    struct timespec now = {0, 0};
+    struct timespec now = { 0, 0 };
     clock_gettime(CLOCK_MONOTONIC, &now);
     time_diff = get_timediff(last_click.ts, now);
 
     // and toggle the flag if it took less than 0.4 secs
-    res = time_diff < 0.4;
+    res = time_diff < DOUBLE_CLICK_TIME;
   }
 
   // store click for next check
@@ -72,26 +74,26 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
     int b = buf[3] - 32;
 
     switch (b & 3) {
-    case 0:
-      if ((b & 64) != 0)
-        event->key = TB_KEY_MOUSE_WHEEL_UP;
-      else
-        event->key = TB_KEY_MOUSE_LEFT;
-      break;
-    case 1:
-      if ((b & 64) != 0)
-        event->key = TB_KEY_MOUSE_WHEEL_DOWN;
-      else
-        event->key = TB_KEY_MOUSE_MIDDLE;
-      break;
-    case 2:
-      event->key = TB_KEY_MOUSE_RIGHT;
-      break;
-    case 3:
-      event->key = TB_KEY_MOUSE_RELEASE;
-      break;
-    default:
-      return -6;
+      case 0:
+        if ((b & 64) != 0)
+          event->key = TB_KEY_MOUSE_WHEEL_UP;
+        else
+          event->key = TB_KEY_MOUSE_LEFT;
+        break;
+      case 1:
+        if ((b & 64) != 0)
+          event->key = TB_KEY_MOUSE_WHEEL_DOWN;
+        else
+          event->key = TB_KEY_MOUSE_MIDDLE;
+        break;
+      case 2:
+        event->key = TB_KEY_MOUSE_RIGHT;
+        break;
+      case 3:
+        event->key = TB_KEY_MOUSE_RELEASE;
+        break;
+      default:
+        return -6;
     }
 
     event->type = TB_EVENT_MOUSE; // TB_EVENT_KEY by default
@@ -101,11 +103,11 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
     event->x = (uint8_t)buf[4] - 1 - 32;
     event->y = (uint8_t)buf[5] - 1 - 32;
 
-    if (event->key > TB_KEY_MOUSE_RELEASE) { // click
+    if (event->key > TB_KEY_MOUSE_RELEASE && !(event->meta & TB_META_MOTION)) { // click
       if (is_double_click(event->key, event->x, event->y)) {
-        event->ch = ++click_count;
+        event->h = ++click_count;
       } else {
-        event->ch = click_count = 1; // not double click. reset count
+        event->h = click_count = 1; // not double click. reset count
       }
     }
 
@@ -160,45 +162,44 @@ static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
       n1 -= 32;
 
     switch (n1 & 3) {
-    case 0:
-      if ((n1&64) != 0) {
-        event->key = TB_KEY_MOUSE_WHEEL_UP;
-      } else {
-        event->key = TB_KEY_MOUSE_LEFT;
-      }
-      break;
-    case 1:
-      if ((n1&64) != 0) {
-        event->key = TB_KEY_MOUSE_WHEEL_DOWN;
-      } else {
-        event->key = TB_KEY_MOUSE_MIDDLE;
-      }
-      break;
-    case 2:
-      event->key = TB_KEY_MOUSE_RIGHT;
-      break;
-    case 3:
-      event->key = TB_KEY_MOUSE_RELEASE;
-      break;
-    default:
-      return mi + 1;
+      case 0:
+        if ((n1&64) != 0) {
+          event->key = TB_KEY_MOUSE_WHEEL_UP;
+        } else {
+          event->key = TB_KEY_MOUSE_LEFT;
+        }
+        break;
+      case 1:
+        if ((n1&64) != 0) {
+          event->key = TB_KEY_MOUSE_WHEEL_DOWN;
+        } else {
+          event->key = TB_KEY_MOUSE_MIDDLE;
+        }
+        break;
+      case 2:
+        event->key = TB_KEY_MOUSE_RIGHT;
+        break;
+      case 3:
+        event->key = TB_KEY_MOUSE_RELEASE;
+        break;
+      default:
+        return mi + 1;
     }
 
-    if (!isM) { // on xterm mouse release is signaled by lowercase m
+    if (!isM) // on xterm mouse release is signaled by lowercase m
       event->key = TB_KEY_MOUSE_RELEASE;
-    }
 
     event->type = TB_EVENT_MOUSE;
-    if ((n1&32) != 0) event->meta |= TB_META_MOTION;
+    if ((n1 & 32) != 0) event->meta |= TB_META_MOTION;
 
     event->x = (uint8_t)n2 - 1;
     event->y = (uint8_t)n3 - 1;
 
-    if (event->key > TB_KEY_MOUSE_RELEASE) { // click
+    if (event->key > TB_KEY_MOUSE_RELEASE && !(event->meta & TB_META_MOTION)) { // click
       if (is_double_click(event->key, event->x, event->y)) {
-        event->ch = ++click_count;
+        event->h = ++click_count;
       } else {
-        event->ch = click_count = 1; // not double click. reset count
+        event->h = click_count = 1; // not double click. reset count
       }
     }
 
@@ -479,17 +480,3 @@ static int parse_esc_seq(struct tb_event *event, const char *seq, int len) {
   return 1;
 }
 
-static void decode_char(struct tb_event * event, uint32_t ch) {
-  if (ch == 127) {
-    event->key = TB_KEY_BACKSPACE2;
-
-  } else if (ch < 32) { // ctrl + a-z or number up to 7
-    event->meta = ch == 13 ? 0 : TB_META_CTRL;
-    event->key = ch;
-    // event->ch  = ch + 97; // we don't want it to be printed
-
-  } else { // a-z -- A-Z -- 0-9
-    event->meta = ('A' <= ch && ch <= 'Z') ? TB_META_SHIFT : 0;
-    event->ch = ch;
-  }
-}

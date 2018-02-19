@@ -1,3 +1,13 @@
+
+// [0m sgr0   Reset all attributes
+// [1m bold   Set "bright" attribute
+// [2m dim    Set "dim" attribute
+// [3m smso   Set "standout" attribute
+// [4m set    Set "underscore" (underlined text) attribute
+// [5m blink  Set "blink" attribute
+// [7m rev    Set "reverse" attribute
+// [8m invis  Set "hidden" attribute
+
 enum {
   T_ENTER_CA,
   T_EXIT_CA,
@@ -130,6 +140,22 @@ static int init_term_builtin(void) {
   }
 
   return EUNSUPPORTED_TERM;
+}
+
+static bool detect_color_support() {
+#ifdef WITH_TRUECOLOR
+  const char *colorterm = getenv("COLORTERM");
+  if (colorterm && ((strcmp(colorterm) == "truecolor") == 0) || (strcmp(colorterm, "24bit") == 0)) {
+    return 2; // true color support
+  }
+#endif
+
+  const char *term = getenv("TERM");
+  if (term && (strstr(term, "-256") || strcmp(term, "xterm") == 0)) {
+    return 1; // 256 color support
+  }
+
+  return 0;
 }
 
 //----------------------------------------------------------------------
