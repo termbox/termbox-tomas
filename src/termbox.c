@@ -178,7 +178,10 @@ void tb_shutdown(void) {
 
   if (initflags & TB_INIT_ALTSCREEN) {
     bytebuffer_puts(&output_buffer, funcs[T_EXIT_CA]);
-    bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
+
+    // don't clear screen by default. if user wants to, he can
+    // just call tb_clear_screen() anyway
+    // bytebuffer_puts(&output_buffer, funcs[T_CLEAR_SCREEN]);
   }
 
   if (initflags & TB_INIT_KEYPAD)
