@@ -11,6 +11,8 @@ static bool starts_with(const char *s1, int len, const char *s2) {
   return *s2 == 0;
 }
 
+static int click_count = 1;
+
 #ifdef __linux__
 
 #include <time.h>
@@ -22,7 +24,6 @@ struct click {
   struct timespec ts;
 };
 
-static int click_count = 1;
 static struct click last_click = { -1, -1, -1, { 0, 0 } };
 static double time_diff;
 
@@ -61,6 +62,9 @@ static bool is_double_click(int type, int x, int y) {
 #else // TODO
 
 static bool is_double_click(int type, int x, int y) {
+  (void)type;
+  (void)x;
+  (void)y;
   return false;
 }
 
