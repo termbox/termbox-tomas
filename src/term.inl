@@ -251,7 +251,8 @@ static char *load_terminfo(void) {
   return terminfo_try_path("/usr/share/terminfo", term);
 }
 
-#define TI_MAGIC 0432
+#define TI_MAGIC 0x11a
+#define TI2_MAGIC 0x21e
 #define TI_HEADER_LENGTH 12
 #define TB_KEYS_NUM 22
 
@@ -274,42 +275,72 @@ static const int16_t ti_keys[] = {
   61, 87,
 };
 
-static int init_term(void) {
+
+// refs:
+// https://github.com/chjj/blessed/blob/master/lib/tput.js
+// https://github.com/mono/mono/blob/master/mcs/class/corlib/System/TermInfoReader.cs
+
+// terminfo file structure, from https://linux.die.net/man/5/term
+// ---------------------------
+// header section (12 bytes)
+// names section 
+// bools section
+// numbers section
+// strings section
+// table section
+
+static void parse_terminfo(char * data) {
   int i;
+  int16_t *header = (int16_t*)data;
+
+  if ((header[1] + header[2]) % 2) { 
+    header[2] += 1; // old quirk to align everything on word boundaries
+  }
+
+  uint8_t  numWidth     = 2; // 2 bytes (16 bit), terminfo v1 by default
+  uint16_t magic        = header[0];
+  uint16_t namesSize    = header[1]; // the size, in bytes, of the names section
+  uint16_t boolsSize    = header[2]; // the number of bytes in the boolean section
+  uint16_t numCount     = header[3]; // the number of integers (16 or 32 bit) in the numbers section
+  uint16_t strOffCount  = header[4]; // the number of offsets (short integers) in the strings section
+  // uint16_t strTableSize = header[5]; // the size, in bytes, of the string table
+
+  if (magic == TI2_MAGIC) {
+    numWidth = 4; // 32 bit, terminfo v2
+  } else if (magic != TI_MAGIC) {
+    fprintf(stderr, "Invalid terminfo magic: %d\n", magic);
+    exit(1);
+  }
+
+  const int strings_offset = TI_HEADER_LENGTH + namesSize + boolsSize + (numWidth * numCount);
+  const int table_offset   = strings_offset + (2 * strOffCount);
+
+  keys  = malloc(sizeof(const char*) * (TB_KEYS_NUM + 1));
+  funcs = malloc(sizeof(const char*) * T_FUNCS_NUM);
+
+  for (i = 0; i < TB_KEYS_NUM; i++) {
+    keys[i] = terminfo_copy_string(data, strings_offset + 2 * ti_keys[i], table_offset);
+  }
+
+  // the last two entries are reserved for mouse. because the table offset is
+  // not there, the two entries have to fill in manually
+  for (i = 0; i < T_FUNCS_NUM-2; i++) {
+    funcs[i] = terminfo_copy_string(data, strings_offset + 2 * ti_funcs[i], table_offset);
+  }
+
+  keys[TB_KEYS_NUM] = 0;
+  funcs[T_FUNCS_NUM-2] = ENTER_MOUSE_SEQ;
+  funcs[T_FUNCS_NUM-1] = EXIT_MOUSE_SEQ;
+}
+
+static int init_term(void) {
   char *data = load_terminfo();
   if (!data) {
     init_from_terminfo = false;
     return init_term_builtin();
   }
 
-  int16_t *header = (int16_t*)data;
-  if ((header[1] + header[2]) % 2) {
-    // old quirk to align everything on word boundaries
-    header[2] += 1;
-  }
-
-  const int str_offset = TI_HEADER_LENGTH +
-    header[1] + header[2] + 2 * header[3];
-  const int table_offset = str_offset + 2 * header[4];
-
-  keys = malloc(sizeof(const char*) * (TB_KEYS_NUM+1));
-  for (i = 0; i < TB_KEYS_NUM; i++) {
-    keys[i] = terminfo_copy_string(data,
-      str_offset + 2 * ti_keys[i], table_offset);
-  }
-  keys[TB_KEYS_NUM] = 0;
-
-  funcs = malloc(sizeof(const char*) * T_FUNCS_NUM);
-  // the last two entries are reserved for mouse. because the table offset is
-  // not there, the two entries have to fill in manually
-  for (i = 0; i < T_FUNCS_NUM-2; i++) {
-    funcs[i] = terminfo_copy_string(data,
-      str_offset + 2 * ti_funcs[i], table_offset);
-  }
-
-  funcs[T_FUNCS_NUM-2] = ENTER_MOUSE_SEQ;
-  funcs[T_FUNCS_NUM-1] = EXIT_MOUSE_SEQ;
-
+  parse_terminfo(data);
   init_from_terminfo = true;
   free(data);
   return 0;
