@@ -295,6 +295,7 @@ SO_IMPORT int tb_select_output_mode(int mode);
 SO_IMPORT int tb_utf8_char_length(char c);
 SO_IMPORT int tb_utf8_char_to_unicode(uint32_t *out, const char *c);
 SO_IMPORT int tb_utf8_unicode_to_char(char *out, uint32_t c);
+SO_IMPORT int tb_unicode_is_char_wide(uint32_t c);
 
 /* Key constants. See also struct tb_event's key field.
  *

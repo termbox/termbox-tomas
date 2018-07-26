@@ -20,6 +20,7 @@ static const unsigned char utf8_mask[6] = {
   0x01
 };
 
+
 int tb_utf8_char_length(char c) {
   return utf8_length[(unsigned char)c];
 }
@@ -74,4 +75,19 @@ int tb_utf8_unicode_to_char(char *out, uint32_t c) {
 
   out[0] = c | first;
   return len;
+}
+
+int tb_unicode_is_char_wide(uint32_t cp) {
+  int res = 0;
+
+  if (0x1D000 <= cp && cp <= 0x1F77F) // emoticons
+    res = 1;
+  else if (0x2100 <= cp && cp <= 0x27BF) // misc symbols and dingbats
+    res = 1;
+  // else if (0xFE00 <= cp && cp <= 0xFE0F) // Variation Selectors
+  //   res = 1;
+  else if (0x1F900 <= cp && cp <= 0x1F9FF) // Supplemental Symbols and Pictographs
+    res = 1;
+
+  return res;
 }

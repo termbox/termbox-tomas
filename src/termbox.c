@@ -222,7 +222,7 @@ void tb_render(void) {
       front = &CELL(&front_buffer, x, y);
 
       // get width of char
-      w = wcwidth(back->ch);
+      w = tb_unicode_is_char_wide(back->ch) ? 2 : wcwidth(back->ch);
       if (w < 1) w = 1;
 
       // if back cell hasn't changed, then skip to next one
@@ -236,12 +236,9 @@ void tb_render(void) {
       set_colors(back->fg, back->bg);
 
       // if we have a wide char, but x position + char width would exceed screen width
-      if (w > 1 && x >= front_buffer.width - (w - 1)) {
+      if (w == 2 && x >= front_buffer.width-1) {
 
-        // then fill with spaces, as we don't have enough room for wide ch
-        for (i = x; i < front_buffer.width; ++i) {
-          send_char(i, y, ' ');
-        }
+        send_char(x, y, ' ');
 
       // otherwise, if we have a regular char or if there's enough room
       } else {
@@ -257,6 +254,7 @@ void tb_render(void) {
           front->bg = back->bg;
         }
       }
+
       x += w;
     }
   }
