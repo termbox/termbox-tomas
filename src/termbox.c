@@ -222,7 +222,7 @@ void tb_render(void) {
       front = &CELL(&front_buffer, x, y);
 
       // get width of char
-      w = tb_unicode_is_char_wide(back->ch) ? 2 : wcwidth(back->ch);
+      w = wcwidth(back->ch); // tb_unicode_is_char_wide(back->ch) ? 2 : 1;
       if (w < 1) w = 1;
 
       // if back cell hasn't changed, then skip to next one
