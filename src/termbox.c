@@ -316,23 +316,30 @@ void tb_char(int x, int y, tb_color fg, tb_color bg, uint32_t ch) {
   tb_cell(x, y, &c);
 }
 
-int tb_string(int x, int y, tb_color fg, tb_color bg, char *str) {
-  uint32_t uni;
-  int c;
-  c = 0;
+#define MAX_LIMIT 1024
 
-  while (*str) {
+int tb_string_with_limit(int x, int y, tb_color fg, tb_color bg, char *str, int limit) {
+  uint32_t uni;
+  int w, c = 0, l = 0;
+
+  while (*str && l < limit) {
     str += tb_utf8_char_to_unicode(&uni, str);
     tb_char(x, y, fg, bg, uni);
-    x++;
+    w = tb_unicode_is_char_wide(uni) ? 2 : 1;
     c++;
+    x++;
+    l = l + w;
   }
 
-  return c;
+  return l;
+}
+
+int tb_string(int x, int y, tb_color fg, tb_color bg, char *str) {
+  return tb_string_with_limit(x, y, fg, bg, str, MAX_LIMIT);
 }
 
 int tb_stringf(int x, int y, tb_color fg, tb_color bg, const char *fmt, ...) {
-  char buf[1024];
+  char buf[MAX_LIMIT];
   va_list vl;
   va_start(vl, fmt);
   vsnprintf(buf, sizeof(buf), fmt, vl);

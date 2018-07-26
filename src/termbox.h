@@ -213,6 +213,8 @@ SO_IMPORT void tb_sendf(const char * fmt, ...);
 /* Set string starting at specific position */
 SO_IMPORT int tb_string(int x, int y, tb_color fg, tb_color bg, char * str);
 
+SO_IMPORT int tb_string_with_limit(int x, int y, tb_color fg, tb_color bg, char * str, int limit);
+
 /* Same as above but with format and arguments (printf-style) */
 SO_IMPORT int tb_stringf(int x, int y, tb_color fg, tb_color bg, const char * fmt, ...);
 
