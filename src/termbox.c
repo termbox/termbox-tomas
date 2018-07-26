@@ -580,7 +580,7 @@ static int convertnum(uint8_t num, char* buf) {
 
 uint8_t map_to_base_color(tb_color col) {
   if (col > 255)
-    return TB_DEFAULT;
+    return TB_WHITE; // TB_DEFAULT;
   else if (col > 244) // light grays
     return TB_LIGHT_GRAY;
   else if (col > 231) // dark grays
