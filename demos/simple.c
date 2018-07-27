@@ -42,7 +42,7 @@ int main(void) {
   tb_string((w/2)-6, (h/2), fg_color, bg_color, "Hello there. ☺");
   tb_render();
 
-  int clicks = 0;
+  // int clicks = 0;
   tb_enable_mouse();
 
   // now, wait for keyboard or input
@@ -79,7 +79,7 @@ int main(void) {
       break;
     case TB_EVENT_MOUSE:
       if (ev.key == TB_KEY_MOUSE_LEFT) {
-        tb_stringf((w/2)-10, h/2, fg_color, bg_color, "Click number %d! (%d, %d)", ++clicks, ev.x, ev.y);
+        tb_stringf((w/2)-10, h/2, fg_color, bg_color, "Click! Count: %d! (%d, %d)", ev.h, ev.x, ev.y);
       }
       break;
     }

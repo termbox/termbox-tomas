@@ -11,7 +11,6 @@ static bool starts_with(const char *s1, int len, const char *s2) {
   return *s2 == 0;
 }
 
-static int click_count = 1;
 
 #ifdef __linux__
 
@@ -24,15 +23,48 @@ struct click {
   struct timespec ts;
 };
 
+static void get_time(struct timespec * ts) {
+  clock_gettime(CLOCK_MONOTONIC, ts);
+}
+
+static double get_timediff(struct timespec start) {
+  struct timespec end = { 0, 0 };
+  get_time(&end);
+
+  return ((double)end.tv_sec + 1.0e-9 * end.tv_nsec) \
+    - ((double)start.tv_sec + 1.0e-9 * start.tv_nsec);
+}
+
+#else
+
+#include <time.h>
+
+struct click {
+  int type;
+  int x;
+  int y;
+  struct timeval ts;
+};
+
+static void get_time(struct timeval * ts) {
+  gettimeofday(ts, NULL);
+}
+
+static double get_timediff(struct timeval start) {
+  struct timeval end = { 0, 0 };
+  get_time(&end);
+
+  return ((double)end.tv_sec + 1e-6 * end.tv_usec) \
+    - ((double)start.tv_sec + 1e-6 * start.tv_usec);
+}
+
+#endif
+
+static int click_count = 1;
 static struct click last_click = { -1, -1, -1, { 0, 0 } };
 static double time_diff;
 
 #define DOUBLE_CLICK_TIME 0.4
-
-static double get_timediff(struct timespec start, struct timespec end) {
-  return ((double)end.tv_sec + 1.0e-9 * end.tv_nsec) \
-    - ((double)start.tv_sec + 1.0e-9 * start.tv_nsec);
-}
 
 static bool is_double_click(int type, int x, int y) {
   int res = false;
@@ -42,9 +74,7 @@ static bool is_double_click(int type, int x, int y) {
   if (last_click.y != -1 && y == last_click.y && type == last_click.type) {
 
     // then get the current time and its difference against the last one
-    struct timespec now = { 0, 0 };
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    time_diff = get_timediff(last_click.ts, now);
+    time_diff = get_timediff(last_click.ts);
 
     // and toggle the flag if it took less than 0.4 secs
     res = time_diff < DOUBLE_CLICK_TIME;
@@ -54,21 +84,10 @@ static bool is_double_click(int type, int x, int y) {
   last_click.x = x;
   last_click.y = y;
   last_click.type = type;
-  clock_gettime(CLOCK_MONOTONIC, &last_click.ts);
+  get_time(&last_click.ts);
 
   return res;
 }
-
-#else // TODO
-
-static bool is_double_click(int type, int x, int y) {
-  (void)type;
-  (void)x;
-  (void)y;
-  return false;
-}
-
-#endif
 
 static int parse_mouse_event(struct tb_event *event, const char *buf, int len) {
 
