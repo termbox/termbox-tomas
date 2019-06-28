@@ -71,7 +71,7 @@ Ok, now let's capture some input. Instead of the `sleep()` statement above, we c
 
 ```c
 ...
-tb_present();
+tb_render();
 
 // set up a counter and enable mouse input
 int clicks = 0;
