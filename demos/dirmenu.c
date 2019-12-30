@@ -414,7 +414,11 @@ void get_choices_in_parallel(const char * argv) {
 }
 
 void stop_thread() {
+#ifdef __ANDROID__
+  pthread_kill(tid, SIGTERM);
+#else
   pthread_cancel(tid);
+#endif
 }
 
 void update_query(char * query, int len, int pos) {
