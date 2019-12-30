@@ -188,8 +188,8 @@ void tb_menu_redraw(int lines) {
   tb_flush();
 }
 
-void tb_menu_remove_option(int index) {
-  if (index >= num_choices)
+void tb_menu_remove_option(int idx) {
+  if (idx >= num_choices)
     return;
 }
 
@@ -563,8 +563,8 @@ void error_exit(char * msg) {
   exit(1);
 }
 
-void signal_exit(int signal) {
-  (void)signal;
+void signal_exit(int signal_code) {
+  (void)signal_code;
   char * msg = "Exit signal received.";
   error_exit(msg);
 }
