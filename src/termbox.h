@@ -36,6 +36,7 @@ typedef uint32_t tb_color;
 #define TB_CYAN          0x00FFFF
 #define TB_LIGHTER_GRAY  0xC0C0C0
 #define TB_MEDIUM_GRAY   0x808080
+#define TB_GRAY          0x808080
 #define TB_LIGHT_RED     0xff5555
 #define TB_LIGHT_GREEN   0x55ff55
 #define TB_LIGHT_YELLOW  0xffff55
@@ -74,6 +75,7 @@ typedef uint16_t tb_color;
 #define TB_CYAN          0x06
 #define TB_LIGHT_GRAY    0x07
 #define TB_MEDIUM_GRAY   0x08
+#define TB_GRAY          0x08
 #define TB_LIGHT_RED     0x09
 #define TB_LIGHT_GREEN   0x0A
 #define TB_LIGHT_YELLOW  0x0B
@@ -97,6 +99,7 @@ typedef uint16_t tb_color;
 #define TB_DARKER_GREY    TB_DARKER_GRAY
 #define TB_DARK_GREY      TB_DARK_GRAY
 #define TB_MEDIUM_GREY    TB_MEDIUM_GRAY
+#define TB_GREY           TB_GRAY
 #define TB_LIGHT_GREY     TB_LIGHT_GRAY
 #define TB_LIGHTER_GREY   TB_LIGHTER_GRAY
 #define TB_LIGHTEST_GREY  TB_LIGHTEST_GRAY
