@@ -347,6 +347,12 @@ int tb_stringf(int x, int y, tb_color fg, tb_color bg, const char *fmt, ...) {
   return tb_string(x, y, fg, bg, buf);
 }
 
+void tb_empty(int x, int y, tb_color bg, int width) {
+  char buf[width];
+  sprintf(buf, "%*s", width, "");
+  tb_string_with_limit(x, y, TB_DEFAULT, bg, buf, width);
+}
+
 struct tb_cell *tb_cell_buffer(void) {
   return back_buffer.cells;
 }

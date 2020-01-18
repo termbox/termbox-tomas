@@ -224,6 +224,9 @@ SO_IMPORT int tb_stringf(int x, int y, tb_color fg, tb_color bg, const char * fm
 /* Set char at specific position */
 SO_IMPORT void tb_char(int x, int y, tb_color fg, tb_color bg, tb_chr ch);
 
+/* Draw empty line of N width from specific position */
+SO_IMPORT void tb_empty(int x, int y, tb_color bg, int width);
+
 /* Changes cell's parameters in the internal back buffer at the specified
  * position.
  */
