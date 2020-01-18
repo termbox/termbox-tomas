@@ -77,6 +77,7 @@ int move_selection(int lines) {
 
 
 int move_up(int lines) {
+  if (lines <= 0) return 0;
   selected -= lines;
   if (selected <= 0) selected = 0;
   if (selected < offset) offset -= lines;
@@ -85,6 +86,7 @@ int move_up(int lines) {
 }
 
 int move_down(int lines) {
+  if (lines <= 0) return 0;
   int menu_h = (h - (margin_top + margin_bottom));
 
   selected += lines;
@@ -92,8 +94,11 @@ int move_down(int lines) {
 
   // TODO: simplify this
   if ((selected + lines) >= menu_h) {
-    if ((offset + lines) <= (num_items - menu_h + lines))
-      offset += lines;
+    // if (lines > 0 && num_items > 0 && (result > (num_items - menu_h + lines))) {
+    if ((offset + lines) > (num_items - menu_h + lines))
+      return 0;
+
+    offset += lines;
   }
 
   return 0;
@@ -102,16 +107,15 @@ int move_down(int lines) {
 
 int draw_options(void) {
   int i, line;
-  char * str;
-  for (i = 0; i < (h - (margin_top + margin_bottom)); i++) {
-    if (i >= num_items) break;
 
+  for (i = 0; i < (h - (margin_top + margin_bottom)); i++) {
+    tb_empty(margin_left, i + margin_top, TB_DEFAULT, w - margin_left);
+  }
+
+  for (i = 0; i < (h - (margin_top + margin_bottom)); i++) {
     line = i + offset;
-    str = items[line];
-    if (str)
-      tb_stringf(margin_left, i + margin_top, line == selected ? selected_fg_color : fg_color, bg_color, "%s  ", str);
-    // else
-    //   tb_empty(margin_left, i + margin_top, TB_BLUE, w - margin_left);
+    if (items[line] == NULL) break;
+    tb_stringf(margin_left, i + margin_top, line == selected ? selected_fg_color : fg_color, bg_color, "%s", items[line]);
   }
   return 0;
 }
@@ -121,7 +125,7 @@ void draw_title(void) {
 }
 
 void draw_status(void) {
-  tb_stringf(0, h-1, fg_color, bg_color, "Selected song: %s", items[selected]);
+  tb_stringf(0, h-1, fg_color, bg_color, "Playing song: %s", items[selected]);
 }
 
 void draw_window(void) {
@@ -136,7 +140,7 @@ int set_selected(int number) {
 }
 
 int play_song(int number) {
-  tb_stringf(w - 15, 0, fg_color, bg_color, "Playing song: %d", number);
+  tb_stringf(w - 12, 0, fg_color, bg_color, "Playing song: %d", number);
   return 0;
 }
 
@@ -161,7 +165,6 @@ int main(void) {
     case TB_EVENT_RESIZE:
       w = ev.w;
       h = ev.h;
-      // tb_resize();
       tb_clear_buffer();
       tb_stringf((w/2)-10, h/2, fg_color, bg_color, "Window resized to: %dx%d", ev.w, ev.h);
       break;
@@ -180,17 +183,24 @@ int main(void) {
         move_down(1);
 
       if (ev.key == TB_KEY_PAGE_UP)
-        move_up(h / 2);
+        move_up(h/2);
 
       if (ev.key == TB_KEY_PAGE_DOWN)
-        move_down(h / 2);
+        move_down(h/2);
 
       break;
     case TB_EVENT_MOUSE:
       if (ev.key == TB_KEY_MOUSE_LEFT) {
-        set_selected(ev.y - margin_top);
-        // tb_stringf(0, 0, fg_color, bg_color, "Click! Count: %d! (%d, %d)", ev.h, ev.x, ev.y);
+        set_selected(offset + (ev.y - margin_top));
+        if (ev.h == 2) play_song(selected);
       }
+
+      if (ev.key == TB_KEY_MOUSE_WHEEL_UP) 
+        move_up(5);
+
+      if (ev.key == TB_KEY_MOUSE_WHEEL_DOWN) 
+        move_down(5);
+
       break;
     }
 
