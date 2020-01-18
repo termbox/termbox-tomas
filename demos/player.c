@@ -47,34 +47,39 @@ int margin_left = 1;
 int margin_top = 2;
 int margin_bottom = 2;
 
-int move_offset(int lines) {
-  int menu_h = (h - (margin_top + margin_bottom));
-  int result = lines + offset;
+/* drawing functions */
 
-  if (result < 0) {
-    offset = 0;
-    return 0;
+int draw_options(void) {
+  int i, line;
+
+  for (i = 0; i < (h - (margin_top + margin_bottom)); i++) {
+    tb_empty(margin_left, i + margin_top, TB_DEFAULT, w - margin_left);
   }
 
-  if (lines > 0 && num_items > 0 && (result > (num_items - menu_h + lines))) {
-    return 0;
+  for (i = 0; i < (h - (margin_top + margin_bottom)); i++) {
+    line = i + offset;
+    if (items[line] == NULL) break;
+    tb_stringf(margin_left, i + margin_top, line == selected ? selected_fg_color : fg_color, bg_color, "%s", items[line]);
   }
-
-  offset = result;
   return 0;
 }
 
-/*
-
-int move_selection(int lines) {
-  int menu_h = (h - (margin_top + margin_bottom));
-  int new_sel = selected + lines;
-  if (new_sel > selected && new_sel < offset + menu_h) {
-    // visible
-  }
+void draw_title(void) {
+  tb_string(margin_left, 0, TB_RED, bg_color, "A music player.");
 }
-*/
 
+void draw_status(void) {
+  tb_empty(0, h-1, TB_CYAN, w - margin_left);
+  tb_stringf(margin_left, h-1, TB_BLACK, TB_CYAN, "Playing song: %s", items[selected]);
+}
+
+void draw_window(void) {
+  draw_title();
+  draw_options();
+  draw_status();
+}
+
+/* movement, select */
 
 int move_up(int lines) {
   if (lines <= 0) return 0;
@@ -104,45 +109,19 @@ int move_down(int lines) {
   return 0;
 }
 
-
-int draw_options(void) {
-  int i, line;
-
-  for (i = 0; i < (h - (margin_top + margin_bottom)); i++) {
-    tb_empty(margin_left, i + margin_top, TB_DEFAULT, w - margin_left);
-  }
-
-  for (i = 0; i < (h - (margin_top + margin_bottom)); i++) {
-    line = i + offset;
-    if (items[line] == NULL) break;
-    tb_stringf(margin_left, i + margin_top, line == selected ? selected_fg_color : fg_color, bg_color, "%s", items[line]);
-  }
-  return 0;
-}
-
-void draw_title(void) {
-  tb_string(0, 0, fg_color, bg_color, "A music player.");
-}
-
-void draw_status(void) {
-  tb_stringf(0, h-1, fg_color, bg_color, "Playing song: %s", items[selected]);
-}
-
-void draw_window(void) {
-  draw_title();
-  draw_options();
-  draw_status();
-}
-
 int set_selected(int number) {
   selected = number;
   return 0;
 }
 
+/* playback */
+
 int play_song(int number) {
   tb_stringf(w - 12, 0, fg_color, bg_color, "Playing song: %d", number);
   return 0;
 }
+
+/* main */
 
 int main(void) {
   if (tb_init() != 0) {
@@ -159,14 +138,13 @@ int main(void) {
 
   // now, wait for keyboard or input
   struct tb_event ev;
-
   while (tb_poll_event(&ev) != -1) {
     switch (ev.type) {
     case TB_EVENT_RESIZE:
       w = ev.w;
       h = ev.h;
       tb_clear_buffer();
-      tb_stringf((w/2)-10, h/2, fg_color, bg_color, "Window resized to: %dx%d", ev.w, ev.h);
+      // tb_stringf((w/2)-10, h/2, fg_color, bg_color, "Window resized to: %dx%d", ev.w, ev.h);
       break;
 
     case TB_EVENT_KEY:
