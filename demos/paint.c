@@ -36,7 +36,7 @@ static const tb_color colors[] = {
   TB_LIGHTEST_GRAY,
   TB_LIGHTER_GRAY,
   TB_LIGHT_GRAY,
-  TB_MEDIUM_GRAY,
+  TB_GRAY,
   TB_DARK_GRAY,
   TB_DARKER_GRAY,
   TB_DARKEST_GRAY,
@@ -141,11 +141,18 @@ int main(void) {
 
     switch (t) {
     case TB_EVENT_KEY:
-      if (ev.key == TB_KEY_ESC) {
+      if (ev.key == TB_KEY_ESC || ev.key == TB_KEY_CTRL_C || ev.ch == 'q') {
         tb_shutdown();
         return 0;
       }
+      if (ev.key == TB_KEY_TAB || ev.ch == ' ') {
+        curCol++;
+        if (curCol > 20) curCol = 0;
+      }
 
+      if (ev.ch >= '0' && ev.ch <= '5') {
+        curRune = 5 - (54 - ev.ch);
+      }
       break;
 
     case TB_EVENT_MOUSE:
@@ -153,6 +160,7 @@ int main(void) {
         mx = ev.x; my = ev.y;
         rune = runes[curRune];
       }
+
       else if (ev.key == TB_KEY_MOUSE_RIGHT) {
         mx = ev.x; my = ev.y;
         rune = runes[0];
