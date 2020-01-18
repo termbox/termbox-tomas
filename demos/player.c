@@ -5,7 +5,7 @@ tb_color fg_color = TB_WHITE;
 tb_color selected_fg_color = TB_YELLOW;
 tb_color bg_color = TB_DEFAULT;
 
-char * items[] = {
+char * items[30] = {
   "Option 1",
   "Option 2",
   "Option 3",
@@ -41,7 +41,7 @@ char * items[] = {
 int w = 0, h = 0;
 int selected = -1;
 int offset = 0;
-int num_items = 29;
+int num_items = 30;
 
 int margin_left = 1;
 int margin_top = 2;
@@ -58,7 +58,7 @@ int draw_options(void) {
 
   for (i = 0; i < (h - (margin_top + margin_bottom)); i++) {
     line = i + offset;
-    if (items[line] == NULL) break;
+    if (line >= num_items) break;
     tb_stringf(margin_left, i + margin_top, line == selected ? selected_fg_color : fg_color, bg_color, "%s", items[line]);
   }
   return 0;
@@ -70,7 +70,7 @@ void draw_title(void) {
 
 void draw_status(void) {
   tb_empty(0, h-1, TB_CYAN, w - margin_left);
-  tb_stringf(margin_left, h-1, TB_BLACK, TB_CYAN, "Playing song: %s", items[selected]);
+  tb_stringf(margin_left, h-1, TB_BLACK, TB_CYAN, "Playing song: %s", selected >= 0 ? items[selected] : "None");
 }
 
 void draw_window(void) {
@@ -95,7 +95,7 @@ int move_down(int lines) {
   int menu_h = (h - (margin_top + margin_bottom));
 
   selected += lines;
-  if (selected >= num_items) selected = num_items;
+  if (selected >= num_items) selected = num_items-1;
 
   // TODO: simplify this
   if ((selected + lines) >= menu_h) {
