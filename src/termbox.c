@@ -311,7 +311,7 @@ void tb_cell(int x, int y, const struct tb_cell *cell) {
   CELL(&back_buffer, x, y) = *cell;
 }
 
-void tb_char(int x, int y, tb_color fg, tb_color bg, uint32_t ch) {
+void tb_char(int x, int y, tb_color fg, tb_color bg, tb_chr ch) {
   struct tb_cell c = {ch, fg, bg};
   tb_cell(x, y, &c);
 }
@@ -319,7 +319,7 @@ void tb_char(int x, int y, tb_color fg, tb_color bg, uint32_t ch) {
 #define MAX_LIMIT 1024
 
 int tb_string_with_limit(int x, int y, tb_color fg, tb_color bg, char *str, int limit) {
-  uint32_t uni;
+  tb_chr uni;
   int w, c = 0, l = 0;
 
   while (*str && l < limit) {
