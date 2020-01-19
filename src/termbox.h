@@ -361,8 +361,9 @@ SO_IMPORT int tb_unicode_is_char_wide(uint32_t c);
 #define TB_KEY_CTRL_F           0x06
 #define TB_KEY_CTRL_G           0x07
 #define TB_KEY_BACKSPACE        0x08
-#define TB_KEY_CTRL_H           0x08 /* clash with 'CTRL_BACKSPACE' */
+#define TB_KEY_CTRL_8           0x08 /* clash with 'BACKSPACE' */
 #define TB_KEY_TAB              0x09
+#define TB_KEY_CTRL_H           0x7F /* clash with 'CTRL_BACKSPACE' */
 #define TB_KEY_CTRL_I           0x09 /* clash with 'TAB' */
 #define TB_KEY_CTRL_J           0x0A
 #define TB_KEY_CTRL_K           0x0B
@@ -394,8 +395,8 @@ SO_IMPORT int tb_unicode_is_char_wide(uint32_t c);
 #define TB_KEY_CTRL_SLASH       0x1F /* clash with 'CTRL_7' */
 #define TB_KEY_CTRL_UNDERSCORE  0x1F /* clash with 'CTRL_7' */
 #define TB_KEY_SPACE            0x20
-#define TB_KEY_BACKSPACE2       0x7F
-#define TB_KEY_CTRL_8           0x7F /* clash with 'BACKSPACE2' */
+#define TB_KEY_CTRL_BACKSPACE   0x7F /* clash with 'CTRL_H' */
+
 
 enum {
 	TB_META_SHIFT = 2,

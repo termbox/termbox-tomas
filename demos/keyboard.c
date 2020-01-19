@@ -509,7 +509,7 @@ const char *funckeymap(int k)
 		"CTRL+E",
 		"CTRL+F",
 		"CTRL+G",
-		"CTRL+H, BACKSPACE",
+		"CTRL+H, CTRL+BACKSPACE",
 		"CTRL+I, TAB",
 		"CTRL+J",
 		"CTRL+K",
@@ -560,8 +560,10 @@ const char *funckeymap(int k)
 		"ARROW UP"
 	};
 
-	if (k == TB_KEY_CTRL_8)
-		return "CTRL+8, BACKSPACE 2"; /* 0x7F */
+	if (k == TB_KEY_CTRL_H)
+		return "CTRL+H, CTRL+BACKSPACE";
+	else if (k == TB_KEY_CTRL_8)
+		return "CTRL+8, BACKSPACE";
 	else if (k >= TB_KEY_ARROW_UP && k <= 0xFFFF)
 		return fkmap[0xFFFF-k];
 	else if (k <= TB_KEY_SPACE)
@@ -656,14 +658,14 @@ int main(int argc, char **argv)
 	}
 
 	tb_enable_mouse();
-	struct tb_event ev;
 
 	draw_keyboard();
 	tb_render();
-	int ctrlxpressed = 0;
 
 	tb_set_title("Keyboard demo");
 
+	int ctrlxpressed = 0;
+	struct tb_event ev;
 	while (tb_poll_event(&ev)) {
 		switch (ev.type) {
 		case TB_EVENT_KEY:

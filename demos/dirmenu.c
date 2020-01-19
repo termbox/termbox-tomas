@@ -474,7 +474,7 @@ int draw_and_get_input() {
           case TB_KEY_DELETE:
             break;
           case TB_KEY_BACKSPACE:
-          case TB_KEY_BACKSPACE2:
+          // case TB_KEY_CTRL_BACKSPACE:
             if (pos > 0) {
               query_len -= char_len;
               pos -= char_len;
