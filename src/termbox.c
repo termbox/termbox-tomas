@@ -41,6 +41,9 @@ static struct cellbuf front_buffer;
 static struct bytebuffer output_buffer;
 static struct bytebuffer input_buffer;
 
+#define MAX_LIMIT 512
+static char print_buf[MAX_LIMIT];
+
 static int termw = -1;
 static int termh = -1;
 
@@ -293,12 +296,11 @@ void tb_send(const char * str) {
 }
 
 void tb_sendf(const char * fmt, ...) {
-  char buf[1024];
   va_list vl;
   va_start(vl, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, vl);
+  vsnprintf(print_buf, sizeof(print_buf), fmt, vl);
   va_end(vl);
-  return tb_send(buf);
+  return tb_send(print_buf);
 }
 
 void tb_cell(int x, int y, const struct tb_cell *cell) {
@@ -315,8 +317,6 @@ void tb_char(int x, int y, tb_color fg, tb_color bg, tb_chr ch) {
   struct tb_cell c = {ch, fg, bg};
   tb_cell(x, y, &c);
 }
-
-#define MAX_LIMIT 1024
 
 int tb_string_with_limit(int x, int y, tb_color fg, tb_color bg, char *str, int limit) {
   tb_chr uni;
@@ -339,18 +339,16 @@ int tb_string(int x, int y, tb_color fg, tb_color bg, char *str) {
 }
 
 int tb_stringf(int x, int y, tb_color fg, tb_color bg, const char *fmt, ...) {
-  char buf[MAX_LIMIT];
   va_list vl;
   va_start(vl, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, vl);
+  vsnprintf(print_buf, sizeof(print_buf), fmt, vl);
   va_end(vl);
-  return tb_string(x, y, fg, bg, buf);
+  return tb_string(x, y, fg, bg, print_buf);
 }
 
 void tb_empty(int x, int y, tb_color bg, int width) {
-  char buf[width];
-  sprintf(buf, "%*s", width, "");
-  tb_string_with_limit(x, y, TB_DEFAULT, bg, buf, width);
+  sprintf(print_buf, "%*s", width, "");
+  tb_string_with_limit(x, y, TB_DEFAULT, bg, print_buf, width);
 }
 
 struct tb_cell *tb_cell_buffer(void) {
