@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(libtermbox C)
 
 option(WITH_TRUECOLOR "Enable true-color support" 0)
+option(BUILD_SHARED_LIBS "Build Shared Library (OFF for static-only)" ON)
 
 include(cmake/add_cflag_if_supported.cmake)
 
@@ -53,8 +54,6 @@ set(SRC src/termbox.c src/utf8.c)
 add_library(${PROJECT_NAME}-static STATIC ${SRC})
 set_target_properties(${PROJECT_NAME}-static PROPERTIES OUTPUT_NAME ${PROJECT_NAME} PREFIX "")
 
-add_library(${PROJECT_NAME}-shared SHARED ${SRC})
-set_target_properties(${PROJECT_NAME}-shared PROPERTIES OUTPUT_NAME ${PROJECT_NAME} PREFIX "")
 
 file(GLOB DEMOS demos/*.c)
 foreach(DEMO ${DEMOS})
@@ -68,7 +67,17 @@ foreach(DEMO ${DEMOS})
 	endif()
 endforeach()
 
-install(TARGETS ${PROJECT_NAME}-static ${PROJECT_NAME}-shared
+if (BUILD_SHARED_LIBS)
+	add_library(${PROJECT_NAME}-shared SHARED ${SRC})
+	set_target_properties(${PROJECT_NAME}-shared PROPERTIES OUTPUT_NAME ${PROJECT_NAME} PREFIX "")
+
+	install(TARGETS ${PROJECT_NAME}-shared
+		LIBRARY DESTINATION lib
+		ARCHIVE DESTINATION lib
+	)
+endif()
+
+install(TARGETS ${PROJECT_NAME}-static
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib
 )
