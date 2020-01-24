@@ -61,7 +61,7 @@ foreach(DEMO ${DEMOS})
 	get_filename_component(DEMOEXE ${DEMO} NAME_WE)
 	add_executable(${DEMOEXE} ${DEMO})
 	add_dependencies(${DEMOEXE} ${PROJECT_NAME}-static)
-	target_link_libraries(${DEMOEXE} ${PROJECT_NAME}-static rt)
+	target_link_libraries(${DEMOEXE} ${PROJECT_NAME}-static)
 	if(${DEMO} MATCHES "dirmenu.c") # this demo requires pthread
 		target_link_libraries(${DEMOEXE} pthread)
 	endif()
