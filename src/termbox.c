@@ -318,7 +318,7 @@ void tb_char(int x, int y, tb_color fg, tb_color bg, tb_chr ch) {
   tb_cell(x, y, &c);
 }
 
-int tb_string_with_limit(int x, int y, tb_color fg, tb_color bg, char *str, int limit) {
+int tb_string_with_limit(int x, int y, tb_color fg, tb_color bg, const char *str, int limit) {
   tb_chr uni;
   int w, c = 0, l = 0;
 
@@ -334,7 +334,7 @@ int tb_string_with_limit(int x, int y, tb_color fg, tb_color bg, char *str, int 
   return l;
 }
 
-int tb_string(int x, int y, tb_color fg, tb_color bg, char *str) {
+int tb_string(int x, int y, tb_color fg, tb_color bg, const char *str) {
   return tb_string_with_limit(x, y, fg, bg, str, MAX_LIMIT);
 }
 
